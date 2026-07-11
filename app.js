@@ -243,6 +243,11 @@ function bindNavigation() {
   document.querySelectorAll(".tab").forEach((tab) => {
     tab.addEventListener("click", () => showView(tab.dataset.view));
   });
+  $("themeToggle").addEventListener("click", () => {
+    const next = document.documentElement.dataset.theme === "dark" ? "light" : "dark";
+    document.documentElement.dataset.theme = next;
+    localStorage.setItem("lighner-box-theme-v1", next);
+  });
 }
 
 function showView(viewId) {
@@ -266,6 +271,15 @@ function bindStudy() {
   $("studyLabel").addEventListener("change", renderStudy);
   $("studyMode").addEventListener("change", renderStudy);
   $("studyOrder").addEventListener("change", renderStudy);
+  document.querySelectorAll("#modeChips .chip").forEach((chip) => {
+    chip.addEventListener("click", () => {
+      $("studyMode").value = chip.dataset.mode;
+      document.querySelectorAll("#modeChips .chip").forEach((other) => {
+        other.classList.toggle("active", other === chip);
+      });
+      renderStudy();
+    });
+  });
   $("revealAnswer").addEventListener("click", () => {
     $("answerPanel").classList.remove("hidden");
     $("revealAnswer").classList.add("hidden");
@@ -619,18 +633,23 @@ function readableFirebaseError(error) {
   return [error.code, error.message].filter(Boolean).join(" - ") || String(error);
 }
 
+function defaultLanguageIndex() {
+  const index = appData.languages.findIndex((lang) => /svensk|swedish/i.test(lang));
+  return index >= 0 ? index : 0;
+}
+
 function renderStudyLanguage() {
   const select = $("studyLanguage");
-  const selected = select.value || String(profileData.profile.targetLanguageIndex || 0);
+  const selected = select.value || String(profileData.profile.targetLanguageIndex || defaultLanguageIndex());
   select.innerHTML = appData.languages.map((lang, index) => `<option value="${index}">${escapeHtml(lang)}</option>`).join("");
-  select.value = appData.languages[selected] ? selected : "0";
+  select.value = appData.languages[selected] ? selected : String(defaultLanguageIndex());
 }
 
 function renderProfileTargetLanguage() {
   const select = $("profileTargetLanguage");
-  const selected = String(profileData.profile.targetLanguageIndex || 0);
+  const selected = String(profileData.profile.targetLanguageIndex || defaultLanguageIndex());
   select.innerHTML = appData.languages.map((lang, index) => `<option value="${index}">${escapeHtml(lang)}</option>`).join("");
-  select.value = appData.languages[selected] ? selected : "0";
+  select.value = appData.languages[selected] ? selected : String(defaultLanguageIndex());
 }
 
 function renderStudyCategory() {
