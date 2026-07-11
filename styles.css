@@ -680,17 +680,37 @@ button:focus-visible {
 
 /* ---------- Study options ---------- */
 
-.options-head {
+.study-options summary {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  margin-bottom: 10px;
+  gap: 8px;
+  min-height: 30px;
+  cursor: pointer;
+  font-weight: 700;
+  list-style: none;
 }
 
-.options-head h3 {
-  margin: 0;
-  font-size: 0.95rem;
+.study-options summary::-webkit-details-marker {
+  display: none;
+}
+
+.study-options summary svg {
+  width: 18px;
+  height: 18px;
+  color: var(--muted);
+}
+
+.study-options summary .chevron {
+  margin-left: auto;
+  transition: transform 0.2s ease;
+}
+
+.study-options[open] summary .chevron {
+  transform: rotate(180deg);
+}
+
+.study-options[open] summary {
+  margin-bottom: 12px;
 }
 
 .mode-chips {

@@ -108,10 +108,42 @@
             </div>
           </div>
 
-          <div class="panel study-options">
-            <div class="options-head">
-              <h3 id="studyTitle">Session</h3>
+          <article class="card-area" aria-live="polite">
+            <div id="emptyStudy" class="empty-state">
+              <h2>No words due</h2>
+              <p>Add vocabulary in Admin or come back when cards are scheduled.</p>
             </div>
+            <div id="flashcard" class="flashcard hidden">
+              <div class="card-meta">
+                <p id="cardBox" class="box-label">Box 1</p>
+                <div id="boxSteps" class="box-steps" aria-hidden="true"></div>
+              </div>
+              <h2 id="cardPrompt"></h2>
+              <button id="revealAnswer" class="primary reveal-button">Reveal answer</button>
+              <div id="answerPanel" class="answer hidden">
+                <dl id="answerList"></dl>
+                <div class="review-actions">
+                  <button id="againBtn" class="grade grade-again"><em>✕</em>Not passed</button>
+                  <button id="hardBtn" class="grade grade-hard"><em>~</em>Hard</button>
+                  <button id="goodBtn" class="grade grade-good"><em>✓</em>Passed</button>
+                  <button id="easyBtn" class="grade grade-easy"><em>✓✓</em>Easy</button>
+                </div>
+                <p class="hint grade-hint">Not passed resets to Box 1 · Hard moves down · Passed moves up · Easy jumps two boxes</p>
+              </div>
+            </div>
+          </article>
+
+          <section class="panel up-next" aria-label="Upcoming words">
+            <h3>Up next</h3>
+            <div id="upNextList" class="up-next-list"></div>
+          </section>
+
+          <details class="panel study-options">
+            <summary id="studyTitle">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M4 6h16M7 12h10M10 18h4"/></svg>
+              Session options
+              <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+            </summary>
             <div class="mode-chips" id="modeChips" role="group" aria-label="Session mode">
               <button class="chip active" data-mode="daily" type="button">Daily goal</button>
               <button class="chip" data-mode="weekly" type="button">Weekly review</button>
@@ -154,37 +186,7 @@
                 </select>
               </label>
             </div>
-          </div>
-
-          <article class="card-area" aria-live="polite">
-            <div id="emptyStudy" class="empty-state">
-              <h2>No words due</h2>
-              <p>Add vocabulary in Admin or come back when cards are scheduled.</p>
-            </div>
-            <div id="flashcard" class="flashcard hidden">
-              <div class="card-meta">
-                <p id="cardBox" class="box-label">Box 1</p>
-                <div id="boxSteps" class="box-steps" aria-hidden="true"></div>
-              </div>
-              <h2 id="cardPrompt"></h2>
-              <button id="revealAnswer" class="primary reveal-button">Reveal answer</button>
-              <div id="answerPanel" class="answer hidden">
-                <dl id="answerList"></dl>
-                <div class="review-actions">
-                  <button id="againBtn" class="grade grade-again"><em>✕</em>Not passed</button>
-                  <button id="hardBtn" class="grade grade-hard"><em>~</em>Hard</button>
-                  <button id="goodBtn" class="grade grade-good"><em>✓</em>Passed</button>
-                  <button id="easyBtn" class="grade grade-easy"><em>✓✓</em>Easy</button>
-                </div>
-                <p class="hint grade-hint">Not passed resets to Box 1 · Hard moves down · Passed moves up · Easy jumps two boxes</p>
-              </div>
-            </div>
-          </article>
-
-          <section class="panel up-next" aria-label="Upcoming words">
-            <h3>Up next</h3>
-            <div id="upNextList" class="up-next-list"></div>
-          </section>
+          </details>
         </div>
       </section>
 
