@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Lighner Box</title>
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body>
+    <header class="topbar">
+      <div>
+        <h1>Lighner Box</h1>
+        <p id="syncStatus">Local profile</p>
+      </div>
+      <nav class="tabs" aria-label="App sections">
+        <button class="tab active" data-view="study">Study</button>
+        <button class="tab" data-view="tracker">Tracker</button>
+        <button class="tab" data-view="admin">Admin</button>
+        <button class="tab" data-view="profile">Profile</button>
+      </nav>
+    </header>
+
+    <main>
+      <section id="study" class="view active" aria-labelledby="studyTitle">
+        <div class="study-layout">
+          <aside class="panel">
+            <h2 id="studyTitle">Due words</h2>
+            <div class="stats-grid">
+              <div><strong id="dueCount">0</strong><span>Due</span></div>
+              <div><strong id="newCount">0</strong><span>New</span></div>
+              <div><strong id="knownCount">0</strong><span>Known</span></div>
+            </div>
+            <label class="field">
+              <span>Study language</span>
+              <select id="studyLanguage"></select>
+            </label>
+          </aside>
+
+          <article class="card-area" aria-live="polite">
+            <div id="emptyStudy" class="empty-state">
+              <h2>No words due</h2>
+              <p>Add vocabulary in Admin or come back when cards are scheduled.</p>
+            </div>
+            <div id="flashcard" class="flashcard hidden">
+              <p id="cardBox" class="box-label">Box 1</p>
+              <h2 id="cardPrompt"></h2>
+              <button id="revealAnswer" class="primary">Reveal answer</button>
+              <div id="answerPanel" class="answer hidden">
+                <dl id="answerList"></dl>
+                <div class="review-actions">
+                  <button id="againBtn" class="danger">Again</button>
+                  <button id="hardBtn">Hard</button>
+                  <button id="goodBtn" class="primary">Good</button>
+                  <button id="easyBtn">Easy</button>
+                </div>
+              </div>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <section id="tracker" class="view" aria-labelledby="trackerTitle">
+        <div class="section-head">
+          <h2 id="trackerTitle">Learning tracker</h2>
+          <button id="resetProgress" class="danger">Reset progress</button>
+        </div>
+        <div class="tracker-grid">
+          <div class="panel"><strong id="totalWords">0</strong><span>Total words</span></div>
+          <div class="panel"><strong id="reviewedToday">0</strong><span>Reviewed today</span></div>
+          <div class="panel"><strong id="accuracyRate">0%</strong><span>Accuracy</span></div>
+          <div class="panel"><strong id="streakDays">0</strong><span>Day streak</span></div>
+        </div>
+        <div class="panel">
+          <h3>Boxes</h3>
+          <div id="boxBars" class="box-bars"></div>
+        </div>
+      </section>
+
+      <section id="admin" class="view" aria-labelledby="adminTitle">
+        <div class="section-head">
+          <h2 id="adminTitle">Vocabulary admin</h2>
+          <button id="downloadCsv">Download merged CSV</button>
+        </div>
+        <div class="panel">
+          <p class="hint">CSV columns: lang1, lang2, lang3. Optional first row headers are accepted.</p>
+          <label class="field">
+            <span>Language names</span>
+            <input id="languageNames" placeholder="English, Swedish, Persian">
+          </label>
+          <label class="field">
+            <span>Import CSV</span>
+            <input id="csvFile" type="file" accept=".csv,text/csv">
+          </label>
+          <textarea id="csvPaste" rows="8" placeholder="hello,hej,سلام"></textarea>
+          <div class="button-row">
+            <button id="importPasted" class="primary">Import pasted CSV</button>
+            <button id="clearVocab" class="danger">Clear vocabulary</button>
+          </div>
+          <p id="importResult" class="hint" role="status"></p>
+        </div>
+        <div class="panel">
+          <h3>Current vocabulary</h3>
+          <div class="table-wrap">
+            <table>
+              <thead id="vocabHead"></thead>
+              <tbody id="vocabTable"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <section id="profile" class="view" aria-labelledby="profileTitle">
+        <div class="panel profile-panel">
+          <h2 id="profileTitle">Profile</h2>
+          <label class="field">
+            <span>Profile name</span>
+            <input id="profileName" placeholder="My vocabulary profile">
+          </label>
+          <label class="field">
+            <span>Profile code</span>
+            <input id="profileCode" placeholder="Leave empty to create one">
+          </label>
+          <div class="button-row">
+            <button id="saveProfile" class="primary">Save profile</button>
+            <button id="copyProfile">Copy code</button>
+          </div>
+          <p class="hint">Use the same profile code on another device. Add Firebase config in `app.js` to sync through the cloud; otherwise this stays on this browser.</p>
+        </div>
+      </section>
+    </main>
+
+    <script type="module" src="app.js"></script>
+  </body>
+</html>
