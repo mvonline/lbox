@@ -276,20 +276,9 @@ function bindAdmin() {
     logs = [];
     renderLogs();
   });
-  $("adminLoginBtn").addEventListener("click", () => {
-    const username = $("adminUsername").value.trim();
-    const password = $("adminPassword").value;
-    if (username === ADMIN_USERNAME && password === ADMIN_PASSWORD) {
-      adminUnlocked = true;
-      sessionStorage.setItem(ADMIN_SESSION_KEY, "true");
-      $("adminPassword").value = "";
-      $("adminStatus").textContent = "Admin unlocked.";
-      logDebug("admin:login-ok", { username });
-      renderAdminGate();
-      return;
-    }
-    $("adminStatus").textContent = "Invalid admin credentials.";
-    logDebug("admin:login-failed", { username });
+  $("adminLoginBtn").addEventListener("click", unlockAdmin);
+  $("adminPassword").addEventListener("keydown", (event) => {
+    if (event.key === "Enter") unlockAdmin();
   });
   $("adminLogout").addEventListener("click", () => {
     adminUnlocked = false;
@@ -298,6 +287,23 @@ function bindAdmin() {
     logDebug("admin:logout");
     renderAdminGate();
   });
+}
+
+function unlockAdmin() {
+  const username = $("adminUsername").value.trim();
+  const password = $("adminPassword").value.trim();
+  logDebug("admin:login-click", { username, hasPassword: Boolean(password) });
+  if (username === ADMIN_USERNAME && password === ADMIN_PASSWORD) {
+    adminUnlocked = true;
+    sessionStorage.setItem(ADMIN_SESSION_KEY, "true");
+    $("adminPassword").value = "";
+    $("adminStatus").textContent = "Admin unlocked.";
+    logDebug("admin:login-ok", { username });
+    renderAdminGate();
+    return;
+  }
+  $("adminStatus").textContent = "Invalid admin credentials.";
+  logDebug("admin:login-failed", { username });
 }
 
 function bindProfile() {
