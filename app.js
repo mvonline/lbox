@@ -24,6 +24,7 @@ const defaultState = {
 let state = loadLocal();
 let currentCard = null;
 let cloud = null;
+let statusMessage = "";
 
 const $ = (id) => document.getElementById(id);
 
@@ -34,7 +35,12 @@ async function init() {
   bindStudy();
   bindAdmin();
   bindProfile();
-  await initCloud();
+  try {
+    await initCloud();
+  } catch (error) {
+    cloud = null;
+    setStatus(`Firebase failed: ${readableFirebaseError(error)}`);
+  }
   render();
 }
 
@@ -51,7 +57,13 @@ function loadLocal() {
 async function save() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
   if (cloud && state.profile.code) {
-    await cloud.save(state);
+    try {
+      await cloud.save(state);
+      setStatus(`Saved to cloud profile: ${state.profile.code}`);
+    } catch (error) {
+      setStatus(`Cloud save failed: ${readableFirebaseError(error)}`);
+      throw error;
+    }
   }
   render();
 }
@@ -62,17 +74,19 @@ async function initCloud() {
     return;
   }
 
-  const [{ initializeApp }, { getAuth, signInAnonymously, onAuthStateChanged }, firestore] = await Promise.all([
+  setStatus("Connecting to Firebase...");
+
+  const [{ initializeApp }, { getAuth, signInAnonymously, onAuthStateChanged }, firestore] = await withTimeout(Promise.all([
     import("https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js"),
     import("https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js"),
     import("https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js"),
-  ]);
+  ]), 10000, "Firebase SDK import timed out");
 
   const app = initializeApp(firebaseConfig);
   const auth = getAuth(app);
   const db = firestore.getFirestore(app);
-  await signInAnonymously(auth);
-  await new Promise((resolve) => onAuthStateChanged(auth, resolve));
+  await withTimeout(signInAnonymously(auth), 10000, "Anonymous sign-in timed out");
+  await withTimeout(new Promise((resolve) => onAuthStateChanged(auth, resolve)), 10000, "Auth state timed out");
   state.profile.cloudUserId = auth.currentUser.uid;
 
   cloud = {
@@ -145,13 +159,17 @@ function bindAdmin() {
 
 function bindProfile() {
   $("saveProfile").addEventListener("click", async () => {
-    state.profile.name = $("profileName").value.trim() || "My profile";
-    state.profile.code = $("profileCode").value.trim() || uid().slice(0, 8);
-    if (cloud) {
-      const remote = await cloud.load(state.profile.code);
-      if (remote) state = mergeState(state, remote);
+    try {
+      state.profile.name = $("profileName").value.trim() || "My profile";
+      state.profile.code = $("profileCode").value.trim() || uid().slice(0, 8);
+      if (cloud) {
+        const remote = await cloud.load(state.profile.code);
+        if (remote) state = mergeState(state, remote);
+      }
+      await save();
+    } catch (error) {
+      setStatus(`Profile save failed: ${readableFirebaseError(error)}`);
     }
-    await save();
   });
   $("copyProfile").addEventListener("click", async () => {
     if (!state.profile.code) return;
@@ -225,13 +243,36 @@ function render() {
   $("profileName").value = state.profile.name;
   $("profileCode").value = state.profile.code;
   $("languageNames").value = state.languages.join(", ");
-  $("syncStatus").textContent = state.profile.code
-    ? `${cloud ? "Cloud" : "Local"} profile: ${state.profile.code}`
-    : cloud ? "Cloud sync ready" : "Local profile";
+  if (!statusMessage) {
+    $("syncStatus").textContent = state.profile.code
+      ? `${cloud ? "Cloud" : "Local"} profile: ${state.profile.code}`
+      : cloud ? "Cloud sync ready" : "Local profile";
+  }
   renderStudyLanguage();
   renderStudy();
   renderTracker();
   renderVocabTable();
+}
+
+function setStatus(message) {
+  statusMessage = message;
+  $("syncStatus").textContent = message;
+  const profileStatus = $("profileStatus");
+  if (profileStatus) profileStatus.textContent = message;
+}
+
+function withTimeout(promise, milliseconds, message) {
+  return Promise.race([
+    promise,
+    new Promise((_, reject) => {
+      setTimeout(() => reject(new Error(message)), milliseconds);
+    }),
+  ]);
+}
+
+function readableFirebaseError(error) {
+  if (!error) return "Unknown error";
+  return [error.code, error.message].filter(Boolean).join(" - ") || String(error);
 }
 
 function renderStudyLanguage() {
