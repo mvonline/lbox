@@ -64,10 +64,10 @@ button:hover {
 
 .topbar {
   display: flex;
-  align-items: end;
+  align-items: center;
   justify-content: space-between;
-  gap: 18px;
-  padding: 14px clamp(16px, 5vw, 48px);
+  gap: 12px;
+  padding: 10px clamp(12px, 4vw, 32px);
   border-bottom: 1px solid var(--line);
   background: rgba(251, 252, 255, 0.88);
   position: sticky;
@@ -84,8 +84,8 @@ p {
 }
 
 h1 {
-  margin-bottom: 4px;
-  font-size: clamp(1.7rem, 4vw, 2.7rem);
+  margin-bottom: 0;
+  font-size: clamp(1.2rem, 3vw, 1.7rem);
 }
 
 .topbar p,
@@ -94,13 +94,26 @@ h1 {
 }
 
 .tabs {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  padding: 4px;
+  display: none;
+  position: absolute;
+  top: calc(100% + 8px);
+  right: clamp(12px, 4vw, 32px);
+  min-width: 210px;
+  grid-template-columns: 1fr;
+  gap: 6px;
+  padding: 8px;
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: rgba(255, 255, 255, 0.72);
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+
+.tabs.open {
+  display: grid;
+}
+
+.menu-toggle {
+  min-width: 76px;
 }
 
 .tab.active {
@@ -112,7 +125,7 @@ h1 {
 main {
   width: min(1440px, 100%);
   margin: 0 auto;
-  padding: 18px clamp(16px, 5vw, 48px) 40px;
+  padding: 10px clamp(10px, 4vw, 32px) 28px;
 }
 
 .view {
@@ -125,9 +138,11 @@ main {
 
 .study-layout {
   display: grid;
-  grid-template-columns: minmax(240px, 300px) minmax(0, 1fr);
-  gap: 16px;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 10px;
   align-items: start;
+  max-width: 920px;
+  margin: 0 auto;
 }
 
 .profile-welcome {
@@ -188,13 +203,15 @@ main {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 16px;
-  margin-bottom: 16px;
+  gap: 10px;
+  max-width: 920px;
+  margin: 0 auto 8px;
+  padding: 10px 12px;
 }
 
 .active-profile strong {
   display: block;
-  font-size: 1.45rem;
+  font-size: 1rem;
 }
 
 .panel,
@@ -216,6 +233,24 @@ main {
   grid-template-columns: repeat(3, 1fr);
   gap: 12px;
   margin: 12px 0;
+}
+
+.study-options {
+  box-shadow: var(--soft-shadow);
+}
+
+.study-options summary {
+  min-height: 42px;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  font-weight: 800;
+}
+
+.study-controls {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(130px, 1fr));
+  gap: 8px;
 }
 
 .tracker-grid {
@@ -262,12 +297,12 @@ textarea {
 }
 
 .card-area {
-  min-height: 390px;
+  min-height: clamp(390px, calc(100vh - 175px), 680px);
 }
 
 .flashcard,
 .empty-state {
-  min-height: 390px;
+  min-height: clamp(390px, calc(100vh - 175px), 680px);
   display: grid;
   align-content: center;
   justify-items: center;
@@ -277,7 +312,7 @@ textarea {
 }
 
 .flashcard h2 {
-  font-size: clamp(2rem, 7vw, 4.4rem);
+  font-size: clamp(2.5rem, 9vw, 5.8rem);
   margin-bottom: 24px;
 }
 
@@ -348,29 +383,34 @@ textarea {
 
 .manual-row {
   display: grid;
-  grid-template-columns: minmax(120px, 160px) minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr) auto;
   gap: 12px;
   align-items: center;
-  padding: 12px;
+  padding: 10px 12px;
   border: 1px solid var(--line);
   border-radius: 8px;
   background: var(--surface);
 }
 
-.manual-row strong {
-  font-size: 1rem;
+.manual-word {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
 }
 
-.manual-terms {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
+.manual-word strong {
+  font-size: 1.15rem;
+  overflow-wrap: anywhere;
 }
 
-.manual-terms span {
-  padding: 4px 8px;
-  border-radius: 8px;
-  background: var(--surface-soft);
+.manual-word span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.manual-load-more {
+  width: 100%;
 }
 
 .hidden {
@@ -523,34 +563,16 @@ td {
     flex-direction: column;
   }
 
-  .tabs {
-    width: 100%;
-    display: grid;
-    grid-template-columns: repeat(5, 1fr);
-  }
-
   .profile-welcome {
     grid-template-columns: minmax(0, 1fr) 360px;
   }
 
-  .study-layout {
-    grid-template-columns: 1fr;
-  }
-
-  .study-layout > aside.panel {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 14px;
-  }
-
-  .study-layout > aside.panel h2,
-  .study-layout > aside.panel .stats-grid,
-  .study-layout > aside.panel .goal-card {
-    grid-column: 1 / -1;
-  }
-
   .tracker-grid {
     grid-template-columns: repeat(3, minmax(140px, 1fr));
+  }
+
+  .study-controls {
+    grid-template-columns: repeat(3, minmax(150px, 1fr));
   }
 }
 
@@ -560,29 +582,22 @@ td {
   }
 
   .topbar {
-    align-items: stretch;
-    flex-direction: column;
+    align-items: center;
+    flex-direction: row;
     gap: 10px;
-    padding: 10px 12px;
-    position: static;
+    padding: 8px 10px;
   }
 
   h1 {
-    font-size: 1.45rem;
+    font-size: 1.2rem;
+  }
+
+  .topbar p {
+    display: none;
   }
 
   .tabs {
-    display: grid;
-    grid-template-columns: repeat(5, minmax(0, 1fr));
-    gap: 6px;
-    padding: 3px;
-  }
-
-  .tabs button {
-    min-height: 42px;
-    padding-inline: 4px;
-    font-size: 0.88rem;
-    white-space: nowrap;
+    right: 10px;
   }
 
   main {
@@ -590,8 +605,7 @@ td {
   }
 
   .study-layout {
-    grid-template-columns: 1fr;
-    gap: 10px;
+    gap: 8px;
   }
 
   .profile-welcome {
@@ -610,34 +624,12 @@ td {
   }
 
   .active-profile {
-    align-items: stretch;
-    flex-direction: column;
+    display: none;
   }
 
   .active-profile .button-row {
     display: grid;
     grid-template-columns: 1fr 1fr;
-  }
-
-  .study-layout > aside.panel {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 8px;
-  }
-
-  .study-layout > aside.panel h2,
-  .study-layout > aside.panel .stats-grid,
-  .study-layout > aside.panel .goal-card,
-  .study-layout > aside.panel > .hint {
-    grid-column: 1 / -1;
-  }
-
-  .study-layout > aside.panel > .hint {
-    display: none;
-  }
-
-  .study-layout > aside.panel .field {
-    margin: 0;
   }
 
   .tracker-grid,
@@ -656,7 +648,7 @@ td {
   .card-area,
   .flashcard,
   .empty-state {
-    min-height: 300px;
+    min-height: calc(100svh - 78px);
   }
 
   .flashcard,
@@ -665,8 +657,16 @@ td {
   }
 
   .flashcard h2 {
-    font-size: clamp(1.8rem, 10vw, 3.1rem);
+    font-size: clamp(2.2rem, 14vw, 4.6rem);
     overflow-wrap: anywhere;
+  }
+
+  .study-options {
+    padding: 8px 12px;
+  }
+
+  .study-controls {
+    grid-template-columns: 1fr 1fr;
   }
 
   .review-actions {
@@ -683,6 +683,10 @@ td {
   .manual-row {
     grid-template-columns: 1fr;
     gap: 8px;
+  }
+
+  .manual-row button {
+    width: 100%;
   }
 
   .review-filters {
@@ -704,7 +708,6 @@ td {
     grid-template-columns: 1fr;
   }
 
-  .study-layout > aside.panel,
   .tracker-grid,
   .stats-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));

@@ -18,6 +18,7 @@ const ADMIN_USERNAME = "admin";
 const ADMIN_PASSWORD = "lbox-admin";
 const DAILY_GOAL = 10;
 const XP_BY_SCORE = { again: 1, hard: 3, good: 6, easy: 8 };
+const MANUAL_BATCH_SIZE = 30;
 const todayKey = () => new Date().toISOString().slice(0, 10);
 const uid = () => crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`;
 
@@ -44,6 +45,7 @@ let logs = [];
 let adminUnlocked = sessionStorage.getItem(ADMIN_SESSION_KEY) === "true";
 let profileMode = sessionStorage.getItem(PROFILE_MODE_KEY) || "create";
 let manualReviewFilter = "all";
+let manualVisibleCount = MANUAL_BATCH_SIZE;
 
 const $ = (id) => document.getElementById(id);
 
@@ -238,6 +240,11 @@ async function initCloud() {
 }
 
 function bindNavigation() {
+  $("menuToggle").addEventListener("click", () => {
+    const nav = $("mainNav");
+    const isOpen = nav.classList.toggle("open");
+    $("menuToggle").setAttribute("aria-expanded", String(isOpen));
+  });
   document.querySelectorAll(".tab").forEach((tab) => {
     tab.addEventListener("click", () => showView(tab.dataset.view));
   });
@@ -250,6 +257,8 @@ function showView(viewId) {
   const tab = document.querySelector(`.tab[data-view="${viewId}"]`);
   if (tab) tab.classList.add("active");
   view.classList.add("active");
+  $("mainNav").classList.remove("open");
+  $("menuToggle").setAttribute("aria-expanded", "false");
   render();
 }
 
@@ -272,21 +281,33 @@ function bindStudy() {
   document.querySelectorAll(".manual-filter").forEach((button) => {
     button.addEventListener("click", () => {
       manualReviewFilter = button.dataset.filter;
+      manualVisibleCount = MANUAL_BATCH_SIZE;
       renderManualReviewList();
     });
   });
   $("manualReviewList").addEventListener("click", (event) => {
     const button = event.target.closest("[data-review-word]");
-    if (!button) return;
+    if (!button) {
+      if (event.target.closest("[data-load-more-manual]")) {
+        manualVisibleCount += MANUAL_BATCH_SIZE;
+        renderManualReviewList();
+      }
+      return;
+    }
     const word = appData.vocab.find((item) => item.id === button.dataset.reviewWord);
     if (!word) return;
     showView("study");
-    currentCard = word;
-    renderSelectedCard(word);
-    setStatus(`Manual review: ${word.terms[Number($("studyLanguage").value || 0)] || word.terms.find(Boolean)}`);
-    $("flashcard").scrollIntoView({ behavior: "smooth", block: "center" });
+    requestAnimationFrame(() => {
+      currentCard = word;
+      renderSelectedCard(word);
+      setStatus(`Manual review: ${word.terms[Number($("studyLanguage").value || 0)] || word.terms.find(Boolean)}`);
+      $("flashcard").scrollIntoView({ behavior: "smooth", block: "center" });
+    });
   });
-  $("manualLabel").addEventListener("change", renderManualReviewList);
+  $("manualLabel").addEventListener("change", () => {
+    manualVisibleCount = MANUAL_BATCH_SIZE;
+    renderManualReviewList();
+  });
   $("resetProgress").addEventListener("click", async () => {
     profileData.progress = {};
     profileData.reviews = [];
@@ -803,23 +824,28 @@ function renderManualReviewList() {
     `;
     return;
   }
-  target.innerHTML = words.map((word) => {
-    const progress = profileData.progress[word.id] || { box: 1, lastScore: "new" };
-    const status = scoreLabel(progress.lastScore);
+  const visibleWords = words.slice(0, manualVisibleCount);
+  target.innerHTML = visibleWords.map((word) => {
+    const promptIndex = Number($("studyLanguage").value || profileData.profile.targetLanguageIndex || 0);
+    const prompt = word.terms[promptIndex] || word.terms.find(Boolean) || "-";
+    const translations = word.terms
+      .map((term, index) => index === promptIndex ? "" : term)
+      .filter(Boolean)
+      .join(" / ");
     return `
       <div class="manual-row">
-        <div>
-          <strong>${escapeHtml(word.categoryName || "General")}</strong>
-          <span>${escapeHtml(status)} · Box ${progress.box}</span>
+        <div class="manual-word">
+          <strong>${escapeHtml(prompt)}</strong>
+          <span>${escapeHtml(translations || "No translation")}</span>
         </div>
-        <div class="manual-terms">
-          ${word.terms.map((term, index) => `<span>${escapeHtml(appData.languages[index])}: ${escapeHtml(term || "-")}</span>`).join("")}
-          ${(word.labelNames || []).map((label) => `<span>${escapeHtml(label)}</span>`).join("")}
-        </div>
-        <button type="button" data-review-word="${escapeHtml(word.id)}">Start review</button>
+        <button class="primary" type="button" data-review-word="${escapeHtml(word.id)}">Review</button>
       </div>
     `;
-  }).join("");
+  }).join("") + (words.length > visibleWords.length ? `
+    <button class="manual-load-more" type="button" data-load-more-manual>
+      Load ${Math.min(MANUAL_BATCH_SIZE, words.length - visibleWords.length)} more
+    </button>
+  ` : "");
 }
 
 function manualReviewCounts() {

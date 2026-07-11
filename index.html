@@ -12,7 +12,8 @@
         <h1>Lighner Box</h1>
         <p id="syncStatus">Local profile</p>
       </div>
-      <nav class="tabs" aria-label="App sections">
+      <button id="menuToggle" class="menu-toggle" type="button" aria-expanded="false" aria-controls="mainNav">Menu</button>
+      <nav id="mainNav" class="tabs" aria-label="App sections">
         <button class="tab active" data-view="study">Study</button>
         <button class="tab" data-view="manual">Manual</button>
         <button class="tab" data-view="tracker">Tracker</button>
@@ -59,57 +60,6 @@
           </div>
         </div>
         <div class="study-layout hidden">
-          <aside class="panel">
-            <h2 id="studyTitle">Due words</h2>
-            <div class="stats-grid">
-              <div><strong id="dueCount">0</strong><span>Due</span></div>
-              <div><strong id="newCount">0</strong><span>New</span></div>
-              <div><strong id="knownCount">0</strong><span>Known</span></div>
-            </div>
-            <label class="field">
-              <span>Main word language</span>
-              <select id="studyLanguage"></select>
-            </label>
-            <label class="field">
-              <span>Category</span>
-              <select id="studyCategory"></select>
-            </label>
-            <label class="field">
-              <span>Label</span>
-              <select id="studyLabel"></select>
-            </label>
-            <label class="field">
-              <span>Session</span>
-              <select id="studyMode">
-                <option value="daily">Daily goal</option>
-                <option value="weekly">Weekly review</option>
-                <option value="due">All due</option>
-                <option value="new">New words</option>
-              </select>
-            </label>
-            <label class="field">
-              <span>Order</span>
-              <select id="studyOrder">
-                <option value="random">Randomized</option>
-                <option value="alphabetical">Alphabetical</option>
-                <option value="new-first">Not seen first</option>
-                <option value="hard-first">Hard first</option>
-                <option value="again-first">Not passed first</option>
-                <option value="easy-first">Easy first</option>
-                <option value="passed-first">Passed first</option>
-                <option value="due-first">Most overdue</option>
-              </select>
-            </label>
-            <p class="hint">Daily goal gives structure. Weekly review previews upcoming cards. Manual review has its own tab.</p>
-            <div class="goal-card">
-              <div>
-                <span>Today</span>
-                <strong id="dailyGoalText">0/10</strong>
-              </div>
-              <div class="bar"><i id="dailyGoalBar"></i></div>
-            </div>
-          </aside>
-
           <article class="card-area" aria-live="polite">
             <div id="emptyStudy" class="empty-state">
               <h2>No words due</h2>
@@ -131,6 +81,58 @@
               </div>
             </div>
           </article>
+
+          <details class="panel study-options">
+            <summary id="studyTitle">Options and progress</summary>
+            <div class="stats-grid">
+              <div><strong id="dueCount">0</strong><span>Due</span></div>
+              <div><strong id="newCount">0</strong><span>New</span></div>
+              <div><strong id="knownCount">0</strong><span>Known</span></div>
+            </div>
+            <div class="study-controls">
+              <label class="field">
+                <span>Main word language</span>
+                <select id="studyLanguage"></select>
+              </label>
+              <label class="field">
+                <span>Category</span>
+                <select id="studyCategory"></select>
+              </label>
+              <label class="field">
+                <span>Label</span>
+                <select id="studyLabel"></select>
+              </label>
+              <label class="field">
+                <span>Session</span>
+                <select id="studyMode">
+                  <option value="daily">Daily goal</option>
+                  <option value="weekly">Weekly review</option>
+                  <option value="due">All due</option>
+                  <option value="new">New words</option>
+                </select>
+              </label>
+              <label class="field">
+                <span>Order</span>
+                <select id="studyOrder">
+                  <option value="random">Randomized</option>
+                  <option value="alphabetical">Alphabetical</option>
+                  <option value="new-first">Not seen first</option>
+                  <option value="hard-first">Hard first</option>
+                  <option value="again-first">Not passed first</option>
+                  <option value="easy-first">Easy first</option>
+                  <option value="passed-first">Passed first</option>
+                  <option value="due-first">Most overdue</option>
+                </select>
+              </label>
+            </div>
+            <div class="goal-card">
+              <div>
+                <span>Today</span>
+                <strong id="dailyGoalText">0/10</strong>
+              </div>
+              <div class="bar"><i id="dailyGoalBar"></i></div>
+            </div>
+          </details>
         </div>
       </section>
 
