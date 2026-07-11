@@ -22,6 +22,24 @@
 
     <main>
       <section id="study" class="view active" aria-labelledby="studyTitle">
+        <div class="panel quick-profile">
+          <div>
+            <h2>Profile</h2>
+            <p id="profileStatus" class="hint" role="status"></p>
+          </div>
+          <label class="field compact-field">
+            <span>Name</span>
+            <input id="profileName" placeholder="My profile">
+          </label>
+          <label class="field compact-field">
+            <span>Code</span>
+            <input id="profileCode" placeholder="Leave empty to create">
+          </label>
+          <div class="button-row">
+            <button id="saveProfile" class="primary">Use profile</button>
+            <button id="copyProfile">Copy code</button>
+          </div>
+        </div>
         <div class="study-layout">
           <aside class="panel">
             <h2 id="studyTitle">Due words</h2>
@@ -112,20 +130,14 @@
       <section id="profile" class="view" aria-labelledby="profileTitle">
         <div class="panel profile-panel">
           <h2 id="profileTitle">Profile</h2>
-          <p id="profileStatus" class="hint" role="status"></p>
-          <label class="field">
-            <span>Profile name</span>
-            <input id="profileName" placeholder="My vocabulary profile">
-          </label>
-          <label class="field">
-            <span>Profile code</span>
-            <input id="profileCode" placeholder="Leave empty to create one">
-          </label>
-          <div class="button-row">
-            <button id="saveProfile" class="primary">Save profile</button>
-            <button id="copyProfile">Copy code</button>
+          <p class="hint">Vocabulary is shared for everyone. Profile codes only store each learner's review progress.</p>
+          <div class="debug-panel">
+            <div class="section-head">
+              <h3>Sync log</h3>
+              <button id="clearLogs">Clear logs</button>
+            </div>
+            <pre id="debugLog"></pre>
           </div>
-          <p class="hint">Use the same profile code on another device. Add Firebase config in `app.js` to sync through the cloud; otherwise this stays on this browser.</p>
         </div>
       </section>
     </main>

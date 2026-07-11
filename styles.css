@@ -118,6 +118,22 @@ main {
   align-items: start;
 }
 
+.quick-profile {
+  display: grid;
+  grid-template-columns: minmax(160px, 1fr) minmax(170px, 240px) minmax(170px, 240px) auto;
+  gap: 16px;
+  align-items: end;
+  margin-bottom: 24px;
+}
+
+.quick-profile h2 {
+  margin-bottom: 4px;
+}
+
+.compact-field {
+  margin: 0;
+}
+
 .panel,
 .flashcard,
 .empty-state {
@@ -279,6 +295,24 @@ td {
   max-width: 680px;
 }
 
+.debug-panel {
+  margin-top: 18px;
+}
+
+#debugLog {
+  min-height: 220px;
+  max-height: 420px;
+  overflow: auto;
+  margin: 0;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #111814;
+  color: #d7f7df;
+  font-size: 0.88rem;
+  white-space: pre-wrap;
+}
+
 @media (max-width: 820px) {
   .topbar {
     align-items: stretch;
@@ -286,6 +320,10 @@ td {
   }
 
   .study-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .quick-profile {
     grid-template-columns: 1fr;
   }
 
