@@ -37,6 +37,27 @@ GitHub Pages cannot store shared user data by itself. To sync profiles across de
 
 Profiles are saved in the `profiles` collection by profile code.
 
+## Run with Docker
+
+Build and serve the app locally with nginx:
+
+```sh
+docker compose up --build
+```
+
+Then open http://localhost:8080. If port 8080 is taken, pick another one:
+
+```sh
+LBOX_PORT=8081 docker compose up --build
+```
+
+Or without compose:
+
+```sh
+docker build -t lbox .
+docker run --rm -p 8080:80 lbox
+```
+
 ## Deploy
 
 Push this repository to GitHub with the default branch named `main`, then enable GitHub Pages with `GitHub Actions` as the source. The included workflow deploys the static files.

@@ -4,5 +4,5 @@ services:
     image: lbox:latest
     container_name: lbox
     ports:
-      - "8080:80"
+      - "${LBOX_PORT:-8080}:80"
     restart: unless-stopped
