@@ -14,6 +14,7 @@
       </div>
       <nav class="tabs" aria-label="App sections">
         <button class="tab active" data-view="study">Study</button>
+        <button class="tab" data-view="manual">Manual</button>
         <button class="tab" data-view="tracker">Tracker</button>
         <button class="tab" data-view="admin" id="adminTab">Admin</button>
         <button class="tab" data-view="profile">Profile</button>
@@ -57,7 +58,7 @@
             <button id="copyProfile">Copy name</button>
           </div>
         </div>
-        <div class="study-layout">
+        <div class="study-layout hidden">
           <aside class="panel">
             <h2 id="studyTitle">Due words</h2>
             <div class="stats-grid">
@@ -99,7 +100,7 @@
                 <option value="due-first">Most overdue</option>
               </select>
             </label>
-            <p class="hint">Daily goal gives structure. Weekly review previews upcoming cards. Manual review below is always open.</p>
+            <p class="hint">Daily goal gives structure. Weekly review previews upcoming cards. Manual review has its own tab.</p>
             <div class="goal-card">
               <div>
                 <span>Today</span>
@@ -131,24 +132,27 @@
             </div>
           </article>
         </div>
+      </section>
+
+      <section id="manual" class="view manual-view" aria-labelledby="manualTitle">
         <div class="panel manual-review">
           <div class="section-head">
             <div>
-              <h2>Manual review</h2>
-              <p class="hint">Filter by your last result and review any word whenever you want.</p>
+              <h2 id="manualTitle">Manual review</h2>
+              <p class="hint">This list ignores the schedule. Pick any word, then grade it on the study card.</p>
             </div>
-            <div class="review-filters" aria-label="Manual review filters">
-              <button class="manual-filter active" data-filter="all" type="button">All</button>
-              <button class="manual-filter" data-filter="good" type="button">Passed</button>
-              <button class="manual-filter" data-filter="hard" type="button">Hard</button>
-              <button class="manual-filter" data-filter="easy" type="button">Easy</button>
-              <button class="manual-filter" data-filter="again" type="button">Not passed</button>
-            </div>
+            <label class="field manual-label-filter">
+              <span>Label</span>
+              <select id="manualLabel"></select>
+            </label>
           </div>
-          <label class="field manual-label-filter">
-            <span>Label</span>
-            <select id="manualLabel"></select>
-          </label>
+          <div class="review-filters" aria-label="Manual review filters">
+            <button class="manual-filter active" data-filter="all" type="button">All</button>
+            <button class="manual-filter" data-filter="good" type="button">Passed</button>
+            <button class="manual-filter" data-filter="hard" type="button">Hard</button>
+            <button class="manual-filter" data-filter="easy" type="button">Easy</button>
+            <button class="manual-filter" data-filter="again" type="button">Not passed</button>
+          </div>
           <div id="manualReviewList" class="manual-list"></div>
         </div>
       </section>

@@ -239,13 +239,18 @@ async function initCloud() {
 
 function bindNavigation() {
   document.querySelectorAll(".tab").forEach((tab) => {
-    tab.addEventListener("click", () => {
-      document.querySelectorAll(".tab, .view").forEach((el) => el.classList.remove("active"));
-      tab.classList.add("active");
-      $(tab.dataset.view).classList.add("active");
-      render();
-    });
+    tab.addEventListener("click", () => showView(tab.dataset.view));
   });
+}
+
+function showView(viewId) {
+  const view = $(viewId);
+  if (!view) return;
+  document.querySelectorAll(".tab, .view").forEach((el) => el.classList.remove("active"));
+  const tab = document.querySelector(`.tab[data-view="${viewId}"]`);
+  if (tab) tab.classList.add("active");
+  view.classList.add("active");
+  render();
 }
 
 function bindStudy() {
@@ -275,8 +280,10 @@ function bindStudy() {
     if (!button) return;
     const word = appData.vocab.find((item) => item.id === button.dataset.reviewWord);
     if (!word) return;
+    showView("study");
     currentCard = word;
     renderSelectedCard(word);
+    setStatus(`Manual review: ${word.terms[Number($("studyLanguage").value || 0)] || word.terms.find(Boolean)}`);
     $("flashcard").scrollIntoView({ behavior: "smooth", block: "center" });
   });
   $("manualLabel").addEventListener("change", renderManualReviewList);
@@ -562,6 +569,7 @@ function renderProfileGate(forceOpen = false) {
   const hasProfile = Boolean(profileData.profile.id || profileData.profile.code);
   $("profileWelcome").classList.toggle("hidden", hasProfile && !forceOpen);
   $("activeProfileBar").classList.toggle("hidden", !hasProfile || forceOpen);
+  document.querySelector(".study-layout")?.classList.toggle("hidden", !hasProfile || forceOpen);
   $("createProfileMode").classList.toggle("active", profileMode === "create");
   $("resumeProfileMode").classList.toggle("active", profileMode === "resume");
   $("saveProfile").textContent = profileMode === "create" ? "Create profile" : "Resume learning";
@@ -774,8 +782,10 @@ function renderDailyGoal() {
 function renderManualReviewList() {
   const target = $("manualReviewList");
   if (!target) return;
+  const counts = manualReviewCounts();
   document.querySelectorAll(".manual-filter").forEach((button) => {
     button.classList.toggle("active", button.dataset.filter === manualReviewFilter);
+    button.textContent = `${manualFilterLabel(button.dataset.filter)} (${counts[button.dataset.filter] || 0})`;
   });
   const words = appData.vocab.filter((word) => {
     if (manualReviewFilter === "all") return true;
@@ -785,7 +795,12 @@ function renderManualReviewList() {
     return labelId === "all" || (word.labelIds || []).includes(labelId);
   });
   if (!words.length) {
-    target.innerHTML = '<p class="hint">No words in this review group yet.</p>';
+    target.innerHTML = `
+      <div class="manual-empty">
+        <strong>No words match this filter yet.</strong>
+        <p class="hint">${manualEmptyHint()}</p>
+      </div>
+    `;
     return;
   }
   target.innerHTML = words.map((word) => {
@@ -801,10 +816,33 @@ function renderManualReviewList() {
           ${word.terms.map((term, index) => `<span>${escapeHtml(appData.languages[index])}: ${escapeHtml(term || "-")}</span>`).join("")}
           ${(word.labelNames || []).map((label) => `<span>${escapeHtml(label)}</span>`).join("")}
         </div>
-        <button type="button" data-review-word="${escapeHtml(word.id)}">Review</button>
+        <button type="button" data-review-word="${escapeHtml(word.id)}">Start review</button>
       </div>
     `;
   }).join("");
+}
+
+function manualReviewCounts() {
+  const counts = { all: appData.vocab.length, good: 0, hard: 0, easy: 0, again: 0 };
+  appData.vocab.forEach((word) => {
+    const score = profileData.progress[word.id]?.lastScore;
+    if (Object.hasOwn(counts, score)) counts[score] += 1;
+  });
+  return counts;
+}
+
+function manualFilterLabel(filter) {
+  if (filter === "good") return "Passed";
+  if (filter === "hard") return "Hard";
+  if (filter === "easy") return "Easy";
+  if (filter === "again") return "Not passed";
+  return "All";
+}
+
+function manualEmptyHint() {
+  if (!appData.vocab.length) return "No shared vocabulary has been added yet.";
+  if (manualReviewFilter === "all") return "Try changing the label filter or ask admin to add vocabulary.";
+  return "A word appears here after you review it and choose this result.";
 }
 
 function scoreLabel(score) {

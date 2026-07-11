@@ -11,8 +11,8 @@ A static three-language Leitner box vocabulary trainer that runs on GitHub Pages
 - Review scheduling with five Leitner boxes
 - Unique profile name for moving between devices
 - Target language selection per learner
-- Daily, weekly, all-due, new-word, and manual review modes
-- Manual review filters for all, passed, hard, easy, and not passed words
+- Daily, weekly, all-due, and new-word study modes
+- Separate Manual tab for all, passed, hard, easy, and not passed words
 - XP, levels, streaks, daily quests, weekly rhythm, mastery progress, and badges
 - Local storage fallback
 - Optional Firebase Anonymous Auth and Firestore cloud sync
@@ -39,7 +39,8 @@ The first row can be headers or data. Exported CSV includes a first `Category` c
    - Hard: moves down one box.
    - Passed: moves up one box.
    - Easy: moves up two boxes.
-4. Use Daily goal for structure, Weekly review for upcoming cards, All due for backlog, New words for unseen vocabulary, and Manual review to revisit words by last result.
+4. Use Daily goal for structure, Weekly review for upcoming cards, All due for backlog, and New words for unseen vocabulary.
+5. Open the Manual tab to revisit words by last result or label, then start a review on the Study card.
 
 ## Cloud sync
 

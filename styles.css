@@ -1,19 +1,19 @@
 :root {
   color-scheme: light;
-  --bg: #f4f6fb;
-  --surface: #fbfcff;
-  --surface-soft: #eef4f1;
-  --text: #18211f;
-  --muted: #65726d;
+  --bg: #f7f8fb;
+  --surface: #ffffff;
+  --surface-soft: #f1f5f4;
+  --text: #17201d;
+  --muted: #66736f;
   --panel: #ffffff;
-  --line: #dce3e0;
-  --primary: #1f6f5b;
+  --line: #dfe6e2;
+  --primary: #0f766e;
   --primary-ink: #ffffff;
-  --danger: #b2414b;
-  --accent: #d9962c;
-  --info: #315f9f;
-  --shadow: 0 18px 42px rgba(30, 45, 65, 0.09);
-  --soft-shadow: 0 8px 24px rgba(30, 45, 65, 0.06);
+  --danger: #b42335;
+  --accent: #2563eb;
+  --info: #7c5e10;
+  --shadow: 0 10px 26px rgba(25, 38, 52, 0.07);
+  --soft-shadow: 0 4px 14px rgba(25, 38, 52, 0.05);
 }
 
 * {
@@ -23,9 +23,7 @@
 body {
   margin: 0;
   min-height: 100vh;
-  background:
-    linear-gradient(180deg, #eef4ff 0, var(--bg) 260px),
-    var(--bg);
+  background: var(--bg);
   color: var(--text);
   font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
@@ -43,7 +41,7 @@ button {
   border-radius: 8px;
   background: var(--surface);
   color: var(--text);
-  padding: 0 14px;
+  padding: 0 13px;
   cursor: pointer;
   font-weight: 700;
 }
@@ -68,8 +66,8 @@ button:hover {
   display: flex;
   align-items: end;
   justify-content: space-between;
-  gap: 24px;
-  padding: 20px clamp(16px, 5vw, 56px);
+  gap: 18px;
+  padding: 14px clamp(16px, 5vw, 48px);
   border-bottom: 1px solid var(--line);
   background: rgba(251, 252, 255, 0.88);
   position: sticky;
@@ -114,7 +112,7 @@ h1 {
 main {
   width: min(1440px, 100%);
   margin: 0 auto;
-  padding: 28px clamp(16px, 5vw, 56px) 56px;
+  padding: 18px clamp(16px, 5vw, 48px) 40px;
 }
 
 .view {
@@ -127,36 +125,34 @@ main {
 
 .study-layout {
   display: grid;
-  grid-template-columns: minmax(250px, 320px) minmax(0, 1fr);
-  gap: 24px;
+  grid-template-columns: minmax(240px, 300px) minmax(0, 1fr);
+  gap: 16px;
   align-items: start;
 }
 
 .profile-welcome {
   display: grid;
   grid-template-columns: minmax(260px, 1fr) minmax(300px, 420px);
-  gap: 24px;
+  gap: 16px;
   align-items: stretch;
-  margin-bottom: 24px;
+  margin-bottom: 16px;
 }
 
 .profile-copy {
   display: grid;
   align-content: center;
-  min-height: 270px;
-  padding: 28px;
+  min-height: 200px;
+  padding: 22px;
   border: 1px solid var(--line);
   border-radius: 8px;
-  background:
-    linear-gradient(135deg, rgba(31, 111, 91, 0.12), rgba(49, 95, 159, 0.12)),
-    var(--surface);
+  background: var(--surface);
   box-shadow: var(--soft-shadow);
 }
 
 .profile-copy h2 {
   max-width: 680px;
   margin-bottom: 10px;
-  font-size: clamp(2rem, 5vw, 4rem);
+  font-size: clamp(1.8rem, 4.2vw, 3.2rem);
 }
 
 .eyebrow {
@@ -193,7 +189,7 @@ main {
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  margin-bottom: 24px;
+  margin-bottom: 16px;
 }
 
 .active-profile strong {
@@ -211,7 +207,7 @@ main {
 }
 
 .panel {
-  padding: 20px;
+  padding: 16px;
 }
 
 .stats-grid,
@@ -219,7 +215,7 @@ main {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 12px;
-  margin: 18px 0;
+  margin: 12px 0;
 }
 
 .tracker-grid {
@@ -240,7 +236,7 @@ main {
 }
 
 strong {
-  font-size: 2rem;
+  font-size: 1.65rem;
 }
 
 span,
@@ -250,8 +246,8 @@ span,
 
 .field {
   display: grid;
-  gap: 8px;
-  margin: 14px 0;
+  gap: 6px;
+  margin: 10px 0;
 }
 
 input,
@@ -266,25 +262,23 @@ textarea {
 }
 
 .card-area {
-  min-height: 460px;
+  min-height: 390px;
 }
 
 .flashcard,
 .empty-state {
-  min-height: 460px;
+  min-height: 390px;
   display: grid;
   align-content: center;
   justify-items: center;
-  padding: clamp(24px, 7vw, 72px);
+  padding: clamp(20px, 5vw, 48px);
   text-align: center;
-  background:
-    linear-gradient(180deg, rgba(255, 244, 220, 0.72), rgba(255, 255, 255, 0.96)),
-    #fff;
+  background: #fff;
 }
 
 .flashcard h2 {
-  font-size: clamp(2.2rem, 8vw, 5rem);
-  margin-bottom: 32px;
+  font-size: clamp(2rem, 7vw, 4.4rem);
+  margin-bottom: 24px;
 }
 
 .answer {
@@ -319,15 +313,16 @@ textarea {
 
 .section-head {
   justify-content: space-between;
-  margin-bottom: 18px;
+  margin-bottom: 14px;
 }
 
-.manual-review {
-  margin-top: 24px;
+.manual-review .review-filters {
+  margin-bottom: 12px;
 }
 
 .manual-label-filter {
-  max-width: 320px;
+  width: min(320px, 100%);
+  margin: 0;
 }
 
 .manual-filter.active {
@@ -338,6 +333,17 @@ textarea {
 .manual-list {
   display: grid;
   gap: 10px;
+}
+
+.manual-empty {
+  padding: 16px;
+  border: 1px dashed var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+}
+
+.manual-empty strong {
+  font-size: 1rem;
 }
 
 .manual-row {
@@ -399,9 +405,9 @@ textarea {
 
 .goal-card {
   display: grid;
-  gap: 10px;
-  margin-top: 18px;
-  padding-top: 16px;
+  gap: 8px;
+  margin-top: 12px;
+  padding-top: 12px;
   border-top: 1px solid var(--line);
 }
 
@@ -499,7 +505,7 @@ td {
   .card-area,
   .flashcard,
   .empty-state {
-    min-height: 520px;
+    min-height: 440px;
   }
 
   .flashcard h2 {
@@ -520,7 +526,7 @@ td {
   .tabs {
     width: 100%;
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(5, 1fr);
   }
 
   .profile-welcome {
@@ -556,33 +562,36 @@ td {
   .topbar {
     align-items: stretch;
     flex-direction: column;
-    gap: 14px;
-    padding: 16px;
+    gap: 10px;
+    padding: 10px 12px;
     position: static;
   }
 
   h1 {
-    font-size: 1.75rem;
+    font-size: 1.45rem;
   }
 
   .tabs {
     display: grid;
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(5, minmax(0, 1fr));
     gap: 6px;
+    padding: 3px;
   }
 
   .tabs button {
-    min-height: 40px;
-    padding-inline: 8px;
+    min-height: 42px;
+    padding-inline: 4px;
+    font-size: 0.88rem;
+    white-space: nowrap;
   }
 
   main {
-    padding: 16px 12px 36px;
+    padding: 10px 10px 24px;
   }
 
   .study-layout {
     grid-template-columns: 1fr;
-    gap: 14px;
+    gap: 10px;
   }
 
   .profile-welcome {
@@ -593,16 +602,42 @@ td {
 
   .profile-copy {
     min-height: auto;
-    padding: 20px;
+    padding: 14px;
   }
 
   .profile-copy h2 {
-    font-size: 2rem;
+    font-size: 1.55rem;
   }
 
   .active-profile {
     align-items: stretch;
     flex-direction: column;
+  }
+
+  .active-profile .button-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .study-layout > aside.panel {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .study-layout > aside.panel h2,
+  .study-layout > aside.panel .stats-grid,
+  .study-layout > aside.panel .goal-card,
+  .study-layout > aside.panel > .hint {
+    grid-column: 1 / -1;
+  }
+
+  .study-layout > aside.panel > .hint {
+    display: none;
+  }
+
+  .study-layout > aside.panel .field {
+    margin: 0;
   }
 
   .tracker-grid,
@@ -615,22 +650,22 @@ td {
   }
 
   .panel {
-    padding: 16px;
+    padding: 12px;
   }
 
   .card-area,
   .flashcard,
   .empty-state {
-    min-height: 380px;
+    min-height: 300px;
   }
 
   .flashcard,
   .empty-state {
-    padding: 24px 16px;
+    padding: 18px 14px;
   }
 
   .flashcard h2 {
-    font-size: clamp(2rem, 13vw, 3.6rem);
+    font-size: clamp(1.8rem, 10vw, 3.1rem);
     overflow-wrap: anywhere;
   }
 
@@ -647,6 +682,12 @@ td {
 
   .manual-row {
     grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .review-filters {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .progress-panels {
@@ -659,14 +700,14 @@ td {
 }
 
 @media (max-width: 430px) {
-  .tracker-grid,
-  .stats-grid {
+  .review-actions {
     grid-template-columns: 1fr;
   }
 
-  .profile-mode,
-  .review-actions {
-    grid-template-columns: 1fr;
+  .study-layout > aside.panel,
+  .tracker-grid,
+  .stats-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .quest-row {
