@@ -118,20 +118,70 @@ main {
   align-items: start;
 }
 
-.quick-profile {
+.profile-welcome {
   display: grid;
-  grid-template-columns: minmax(160px, 1fr) minmax(170px, 240px) minmax(170px, 240px) auto;
-  gap: 16px;
-  align-items: end;
+  grid-template-columns: minmax(260px, 1fr) minmax(300px, 420px);
+  gap: 24px;
+  align-items: stretch;
   margin-bottom: 24px;
 }
 
-.quick-profile h2 {
-  margin-bottom: 4px;
+.profile-copy {
+  display: grid;
+  align-content: center;
+  min-height: 270px;
+  padding: 28px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #e9efe7;
 }
 
-.compact-field {
-  margin: 0;
+.profile-copy h2 {
+  max-width: 680px;
+  margin-bottom: 10px;
+  font-size: clamp(2rem, 5vw, 4rem);
+}
+
+.eyebrow {
+  margin-bottom: 8px;
+  color: var(--primary);
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.profile-form {
+  display: grid;
+  align-content: start;
+}
+
+.profile-mode {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.mode-btn.active {
+  background: var(--text);
+  color: #fff;
+}
+
+.wide-button {
+  width: 100%;
+  margin-top: 6px;
+}
+
+.active-profile {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.active-profile strong {
+  display: block;
+  font-size: 1.45rem;
 }
 
 .panel,
@@ -327,8 +377,13 @@ td {
     grid-template-columns: 1fr;
   }
 
-  .quick-profile {
+  .profile-welcome {
     grid-template-columns: 1fr;
+  }
+
+  .active-profile {
+    align-items: stretch;
+    flex-direction: column;
   }
 
   .tracker-grid,

@@ -22,21 +22,36 @@
 
     <main>
       <section id="study" class="view active" aria-labelledby="studyTitle">
-        <div class="panel quick-profile">
-          <div>
-            <h2>Profile</h2>
+        <div id="profileWelcome" class="profile-welcome">
+          <div class="profile-copy">
+            <p class="eyebrow">Learner profile</p>
+            <h2>Start learning with a profile code</h2>
             <p id="profileStatus" class="hint" role="status"></p>
           </div>
-          <label class="field compact-field">
-            <span>Name</span>
-            <input id="profileName" placeholder="My profile">
-          </label>
-          <label class="field compact-field">
-            <span>Code</span>
-            <input id="profileCode" placeholder="Leave empty to create">
-          </label>
+          <div class="profile-form panel">
+            <div class="profile-mode" role="group" aria-label="Profile mode">
+              <button id="createProfileMode" class="mode-btn active" type="button">New profile</button>
+              <button id="resumeProfileMode" class="mode-btn" type="button">Use code</button>
+            </div>
+            <label class="field" id="profileNameField">
+              <span>Name</span>
+              <input id="profileName" placeholder="Your name or nickname">
+            </label>
+            <label class="field">
+              <span>Profile code</span>
+              <input id="profileCode" placeholder="Leave empty for a new code">
+            </label>
+            <button id="saveProfile" class="primary wide-button">Continue</button>
+          </div>
+        </div>
+        <div id="activeProfileBar" class="panel active-profile hidden">
+          <div>
+            <span>Active profile</span>
+            <strong id="activeProfileName">My profile</strong>
+            <p id="activeProfileCode" class="hint"></p>
+          </div>
           <div class="button-row">
-            <button id="saveProfile" class="primary">Use profile</button>
+            <button id="switchProfile">Switch profile</button>
             <button id="copyProfile">Copy code</button>
           </div>
         </div>

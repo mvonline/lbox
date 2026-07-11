@@ -13,6 +13,7 @@ const STORAGE_KEY = "lighner-box-state-v1";
 const APP_STORAGE_KEY = "lighner-box-app-v2";
 const PROFILE_STORAGE_KEY = "lighner-box-profile-v2";
 const ADMIN_SESSION_KEY = "lighner-box-admin-session-v1";
+const PROFILE_MODE_KEY = "lighner-box-profile-mode-v1";
 const ADMIN_USERNAME = "admin";
 const ADMIN_PASSWORD = "lbox-admin";
 const todayKey = () => new Date().toISOString().slice(0, 10);
@@ -37,6 +38,7 @@ let cloud = null;
 let statusMessage = "";
 let logs = [];
 let adminUnlocked = sessionStorage.getItem(ADMIN_SESSION_KEY) === "true";
+let profileMode = sessionStorage.getItem(PROFILE_MODE_KEY) || "create";
 
 const $ = (id) => document.getElementById(id);
 
@@ -307,24 +309,39 @@ function unlockAdmin() {
 }
 
 function bindProfile() {
+  $("createProfileMode").addEventListener("click", () => setProfileMode("create"));
+  $("resumeProfileMode").addEventListener("click", () => setProfileMode("resume"));
+  $("profileCode").addEventListener("keydown", (event) => {
+    if (event.key === "Enter") saveProfile();
+  });
   $("saveProfile").addEventListener("click", async () => {
-    try {
-      profileData.profile.name = $("profileName").value.trim() || "My profile";
-      profileData.profile.code = $("profileCode").value.trim() || uid().slice(0, 8);
-      if (cloud) {
-        const remote = await cloud.loadProfile(profileData.profile.code);
-        if (remote) profileData = mergeProfileData(profileData, remote);
-      }
-      await saveProfileData();
-    } catch (error) {
-      setStatus(`Profile save failed: ${readableFirebaseError(error)}`);
-      logDebug("profile:save-failed", error);
-    }
+    await saveProfile();
+  });
+  $("switchProfile").addEventListener("click", () => {
+    setProfileMode("resume");
+    $("profileCode").focus();
+    renderProfileGate(true);
   });
   $("copyProfile").addEventListener("click", async () => {
     if (!profileData.profile.code) return;
     await navigator.clipboard.writeText(profileData.profile.code);
+    setStatus(`Copied profile code: ${profileData.profile.code}`);
   });
+}
+
+async function saveProfile() {
+  try {
+    profileData.profile.name = $("profileName").value.trim() || "My profile";
+    profileData.profile.code = $("profileCode").value.trim() || uid().slice(0, 8);
+    if (cloud) {
+      const remote = await cloud.loadProfile(profileData.profile.code);
+      if (remote) profileData = mergeProfileData(profileData, remote);
+    }
+    await saveProfileData();
+  } catch (error) {
+    setStatus(`Profile save failed: ${readableFirebaseError(error)}`);
+    logDebug("profile:save-failed", error);
+  }
 }
 
 async function importCsv(text) {
@@ -417,6 +434,7 @@ function render() {
   renderTracker();
   renderVocabTable();
   renderAdminGate();
+  renderProfileGate();
   renderLogs();
 }
 
@@ -457,6 +475,30 @@ function renderAdminGate() {
   $("adminLogin").classList.toggle("hidden", adminUnlocked);
   $("adminTools").classList.toggle("hidden", !adminUnlocked);
   $("adminTab").textContent = adminUnlocked ? "Admin" : "Admin lock";
+}
+
+function setProfileMode(mode) {
+  profileMode = mode;
+  sessionStorage.setItem(PROFILE_MODE_KEY, mode);
+  if (mode === "create") {
+    $("profileCode").placeholder = "Leave empty for a new code";
+  } else {
+    $("profileCode").placeholder = "Paste profile code";
+  }
+  renderProfileGate(true);
+}
+
+function renderProfileGate(forceOpen = false) {
+  const hasProfile = Boolean(profileData.profile.code);
+  $("profileWelcome").classList.toggle("hidden", hasProfile && !forceOpen);
+  $("activeProfileBar").classList.toggle("hidden", !hasProfile || forceOpen);
+  $("createProfileMode").classList.toggle("active", profileMode === "create");
+  $("resumeProfileMode").classList.toggle("active", profileMode === "resume");
+  $("profileNameField").classList.toggle("hidden", profileMode === "resume");
+  $("profileCode").placeholder = profileMode === "create" ? "Leave empty for a new code" : "Paste profile code";
+  $("saveProfile").textContent = profileMode === "create" ? "Create and start" : "Resume learning";
+  $("activeProfileName").textContent = profileData.profile.name || "My profile";
+  $("activeProfileCode").textContent = profileData.profile.code ? `Code: ${profileData.profile.code}` : "";
 }
 
 function withTimeout(promise, milliseconds, message) {
