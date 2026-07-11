@@ -8,7 +8,7 @@ A static three-language Leitner box vocabulary trainer that runs on GitHub Pages
 - CSV import from file or pasted text
 - Browser-side merge into one vocabulary list
 - Review scheduling with five Leitner boxes
-- Profile code for moving between devices
+- Unique profile name for moving between devices
 - Local storage fallback
 - Optional Firebase Anonymous Auth and Firestore cloud sync
 - GitHub Actions deployment to Pages
@@ -35,7 +35,7 @@ GitHub Pages cannot store shared user data by itself. To sync profiles across de
 4. Add your Firebase web app config to `firebaseConfig` in `app.js`.
 5. Publish to GitHub Pages.
 
-Profiles are saved in the `profiles` collection by profile code.
+Profiles are saved in the `profiles` collection by normalized unique profile name.
 
 ## Run with Docker
 

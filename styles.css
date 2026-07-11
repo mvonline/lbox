@@ -324,6 +324,19 @@ textarea {
   background: var(--accent);
 }
 
+.goal-card {
+  display: grid;
+  gap: 10px;
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+}
+
+.goal-card strong {
+  display: block;
+  font-size: 1.5rem;
+}
+
 .table-wrap {
   overflow: auto;
 }

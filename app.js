@@ -16,6 +16,7 @@ const ADMIN_SESSION_KEY = "lighner-box-admin-session-v1";
 const PROFILE_MODE_KEY = "lighner-box-profile-mode-v1";
 const ADMIN_USERNAME = "admin";
 const ADMIN_PASSWORD = "lbox-admin";
+const DAILY_GOAL = 10;
 const todayKey = () => new Date().toISOString().slice(0, 10);
 const uid = () => crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`;
 
@@ -26,9 +27,10 @@ const defaultAppData = {
 };
 
 const defaultProfileData = {
-  profile: { name: "My profile", code: "", cloudUserId: "" },
+  profile: { name: "", id: "", code: "", cloudUserId: "" },
   progress: {},
   reviews: [],
+  stats: { points: 0, lastReviewDate: "", streak: 0, bestStreak: 0 },
 };
 
 let appData = loadLocalAppData();
@@ -100,10 +102,15 @@ function pickAppData(data) {
 }
 
 function pickProfileData(data) {
+  const profile = { ...defaultProfileData.profile, ...(data.profile || {}) };
+  const isOldEmptyDefault = profile.name === "My profile" && !profile.id && !profile.code;
+  profile.id = isOldEmptyDefault ? "" : profile.id || profile.code || profileIdFromName(profile.name);
+  profile.code = profile.code || profile.id;
   return {
-    profile: { ...defaultProfileData.profile, ...(data.profile || {}) },
+    profile,
     progress: data.progress || {},
     reviews: Array.isArray(data.reviews) ? data.reviews : [],
+    stats: { ...defaultProfileData.stats, ...(data.stats || {}) },
   };
 }
 
@@ -132,12 +139,12 @@ async function saveAppData() {
 
 async function saveProfileData() {
   localStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(profileData));
-  logDebug("profile:local-save", { code: profileData.profile.code || "(none)" });
-  if (cloud && profileData.profile.code) {
+  logDebug("profile:local-save", { name: profileData.profile.name || "(none)" });
+  if (cloud && profileData.profile.id) {
     try {
       await cloud.saveProfile(profileData);
-      setStatus(`Saved to cloud profile: ${profileData.profile.code}`);
-      logDebug("profile:cloud-save-ok", { code: profileData.profile.code });
+      setStatus(`Saved profile: ${profileData.profile.name}`);
+      logDebug("profile:cloud-save-ok", { name: profileData.profile.name });
     } catch (error) {
       setStatus(`Cloud save failed: ${readableFirebaseError(error)}`);
       logDebug("profile:cloud-save-failed", error);
@@ -200,17 +207,17 @@ async function initCloud() {
         updatedAt: firestore.serverTimestamp(),
       });
     },
-    async loadProfile(code) {
-      const ref = firestore.doc(db, "profiles", code);
-      logDebug("profile:cloud-load-start", { path: `profiles/${code}` });
+    async loadProfile(profileId) {
+      const ref = firestore.doc(db, "profiles", profileId);
+      logDebug("profile:cloud-load-start", { path: `profiles/${profileId}` });
       const snap = await firestore.getDoc(ref);
       const data = snap.exists() ? snap.data() : null;
-      logDebug("profile:cloud-load-result", { exists: snap.exists(), code });
+      logDebug("profile:cloud-load-result", { exists: snap.exists(), profileId });
       return data ? pickProfileData(data) : null;
     },
     async saveProfile(nextProfileData) {
-      const ref = firestore.doc(db, "profiles", nextProfileData.profile.code);
-      logDebug("profile:cloud-save-start", { path: `profiles/${nextProfileData.profile.code}` });
+      const ref = firestore.doc(db, "profiles", nextProfileData.profile.id);
+      logDebug("profile:cloud-save-start", { path: `profiles/${nextProfileData.profile.id}` });
       await firestore.setDoc(ref, {
         ...nextProfileData,
         updatedAt: firestore.serverTimestamp(),
@@ -239,6 +246,7 @@ function bindNavigation() {
 function bindStudy() {
   $("studyLanguage").addEventListener("change", renderStudy);
   $("studyCategory").addEventListener("change", renderStudy);
+  $("studyMode").addEventListener("change", renderStudy);
   $("revealAnswer").addEventListener("click", () => $("answerPanel").classList.remove("hidden"));
   $("againBtn").addEventListener("click", () => review("again"));
   $("hardBtn").addEventListener("click", () => review("hard"));
@@ -247,6 +255,7 @@ function bindStudy() {
   $("resetProgress").addEventListener("click", async () => {
     profileData.progress = {};
     profileData.reviews = [];
+    profileData.stats = structuredClone(defaultProfileData.stats);
     await saveProfileData();
   });
 }
@@ -311,7 +320,7 @@ function unlockAdmin() {
 function bindProfile() {
   $("createProfileMode").addEventListener("click", () => setProfileMode("create"));
   $("resumeProfileMode").addEventListener("click", () => setProfileMode("resume"));
-  $("profileCode").addEventListener("keydown", (event) => {
+  $("profileName").addEventListener("keydown", (event) => {
     if (event.key === "Enter") saveProfile();
   });
   $("saveProfile").addEventListener("click", async () => {
@@ -319,23 +328,46 @@ function bindProfile() {
   });
   $("switchProfile").addEventListener("click", () => {
     setProfileMode("resume");
-    $("profileCode").focus();
+    $("profileName").focus();
     renderProfileGate(true);
   });
   $("copyProfile").addEventListener("click", async () => {
-    if (!profileData.profile.code) return;
-    await navigator.clipboard.writeText(profileData.profile.code);
-    setStatus(`Copied profile code: ${profileData.profile.code}`);
+    if (!profileData.profile.name) return;
+    await navigator.clipboard.writeText(profileData.profile.name);
+    setStatus(`Copied profile name: ${profileData.profile.name}`);
   });
 }
 
 async function saveProfile() {
   try {
-    profileData.profile.name = $("profileName").value.trim() || "My profile";
-    profileData.profile.code = $("profileCode").value.trim() || uid().slice(0, 8);
+    const name = $("profileName").value.trim();
+    if (!name) {
+      setStatus("Enter a unique profile name.");
+      return;
+    }
+    const profileId = profileIdFromName(name);
+    const previousProfileId = profileData.profile.id;
     if (cloud) {
-      const remote = await cloud.loadProfile(profileData.profile.code);
-      if (remote) profileData = mergeProfileData(profileData, remote);
+      const remote = await cloud.loadProfile(profileId);
+      if (profileMode === "create" && remote) {
+        setStatus("That profile name is already taken. Use another name or choose Use name.");
+        logDebug("profile:create-name-taken", { name, profileId });
+        return;
+      }
+      if (remote) {
+        profileData = pickProfileData(remote);
+      } else if (previousProfileId !== profileId) {
+        profileData.progress = {};
+        profileData.reviews = [];
+      }
+      profileData.profile = { ...profileData.profile, name, id: profileId, code: profileId };
+    } else if (previousProfileId !== profileId) {
+      profileData = {
+        ...structuredClone(defaultProfileData),
+        profile: { name, id: profileId, code: profileId, cloudUserId: profileData.profile.cloudUserId },
+      };
+    } else {
+      profileData.profile = { ...profileData.profile, name, id: profileId, code: profileId };
     }
     await saveProfileData();
   } catch (error) {
@@ -420,12 +452,12 @@ function normalizeKey(terms, categoryId = "general") {
 
 function render() {
   $("profileName").value = profileData.profile.name;
-  $("profileCode").value = profileData.profile.code;
+  $("profileCode").value = profileData.profile.id || profileData.profile.code;
   $("languageNames").value = appData.languages.join(", ");
   if (!$("categoryName").value) $("categoryName").value = appData.categories[0]?.name || "General";
   if (!statusMessage) {
-    $("syncStatus").textContent = profileData.profile.code
-      ? `${cloud ? "Cloud" : "Local"} profile: ${profileData.profile.code}`
+    $("syncStatus").textContent = profileData.profile.id
+      ? `${cloud ? "Cloud" : "Local"} profile: ${profileData.profile.name}`
       : cloud ? "Cloud sync ready" : "Local profile";
   }
   renderStudyLanguage();
@@ -480,25 +512,18 @@ function renderAdminGate() {
 function setProfileMode(mode) {
   profileMode = mode;
   sessionStorage.setItem(PROFILE_MODE_KEY, mode);
-  if (mode === "create") {
-    $("profileCode").placeholder = "Leave empty for a new code";
-  } else {
-    $("profileCode").placeholder = "Paste profile code";
-  }
   renderProfileGate(true);
 }
 
 function renderProfileGate(forceOpen = false) {
-  const hasProfile = Boolean(profileData.profile.code);
+  const hasProfile = Boolean(profileData.profile.id || profileData.profile.code);
   $("profileWelcome").classList.toggle("hidden", hasProfile && !forceOpen);
   $("activeProfileBar").classList.toggle("hidden", !hasProfile || forceOpen);
   $("createProfileMode").classList.toggle("active", profileMode === "create");
   $("resumeProfileMode").classList.toggle("active", profileMode === "resume");
-  $("profileNameField").classList.toggle("hidden", profileMode === "resume");
-  $("profileCode").placeholder = profileMode === "create" ? "Leave empty for a new code" : "Paste profile code";
-  $("saveProfile").textContent = profileMode === "create" ? "Create and start" : "Resume learning";
+  $("saveProfile").textContent = profileMode === "create" ? "Create profile" : "Resume learning";
   $("activeProfileName").textContent = profileData.profile.name || "My profile";
-  $("activeProfileCode").textContent = profileData.profile.code ? `Code: ${profileData.profile.code}` : "";
+  $("activeProfileCode").textContent = profileData.profile.name ? `Name: ${profileData.profile.name}` : "";
 }
 
 function withTimeout(promise, milliseconds, message) {
@@ -538,11 +563,15 @@ function renderStudy() {
   $("dueCount").textContent = due.length;
   $("newCount").textContent = appData.vocab.filter((word) => !profileData.progress[word.id]).length;
   $("knownCount").textContent = Object.values(profileData.progress).filter((item) => item.box >= 5).length;
+  renderDailyGoal();
 
   $("emptyStudy").classList.toggle("hidden", Boolean(currentCard));
   $("flashcard").classList.toggle("hidden", !currentCard);
   $("answerPanel").classList.add("hidden");
-  if (!currentCard) return;
+  if (!currentCard) {
+    renderEmptyStudyMessage();
+    return;
+  }
 
   const promptIndex = Number($("studyLanguage").value || 0);
   $("cardPrompt").textContent = currentCard.terms[promptIndex] || currentCard.terms.find(Boolean);
@@ -554,25 +583,63 @@ function renderStudy() {
   `).join("");
 }
 
+function renderEmptyStudyMessage() {
+  const mode = $("studyMode").value || "daily";
+  const title = $("emptyStudy").querySelector("h2");
+  const message = $("emptyStudy").querySelector("p");
+  if (mode === "daily" && todayReviewCount() >= DAILY_GOAL) {
+    title.textContent = "Daily goal complete";
+    message.textContent = "Switch to Weekly review or All due for more practice.";
+    return;
+  }
+  title.textContent = "No words due";
+  message.textContent = "Add vocabulary in Admin or come back when cards are scheduled.";
+}
+
 function dueCards() {
   const now = Date.now();
   const categoryId = $("studyCategory").value || "all";
-  return appData.vocab.filter((word) => {
+  const mode = $("studyMode").value || "daily";
+  const cards = appData.vocab.filter((word) => {
     if (categoryId !== "all" && word.categoryId !== categoryId) return false;
     const progress = profileData.progress[word.id];
+    if (mode === "new") return !progress;
+    if (mode === "weekly") return !progress || progress.dueAt <= now + 7 * 86400000;
     return !progress || progress.dueAt <= now;
-  });
+  }).sort((a, b) => dailyCardRank(a.id) - dailyCardRank(b.id));
+  if (mode !== "daily") return cards;
+  return cards.slice(0, Math.max(0, DAILY_GOAL - todayReviewCount()));
 }
 
 async function review(score) {
   if (!currentCard) return;
-  const previous = profileData.progress[currentCard.id] || { box: 1, correct: 0, total: 0 };
-  const delta = { again: -1, hard: 0, good: 1, easy: 2 }[score];
-  const box = score === "again" ? 1 : Math.max(1, Math.min(5, previous.box + delta));
-  const dueAt = Date.now() + BOX_INTERVALS[box] * 86400000;
-  const correct = score === "again" ? previous.correct : previous.correct + 1;
-  profileData.progress[currentCard.id] = { box, dueAt, correct, total: previous.total + 1, lastScore: score };
-  profileData.reviews.push({ wordId: currentCard.id, score, date: todayKey(), at: Date.now() });
+  const previous = profileData.progress[currentCard.id] || {
+    box: 1,
+    correct: 0,
+    total: 0,
+    lapses: 0,
+  };
+  const outcome = applyLeitnerOutcome(previous.box, score);
+  const dueAt = Date.now() + BOX_INTERVALS[outcome.box] * 86400000;
+  const passed = score !== "again";
+  profileData.progress[currentCard.id] = {
+    box: outcome.box,
+    dueAt,
+    correct: previous.correct + (passed ? 1 : 0),
+    total: previous.total + 1,
+    lapses: previous.lapses + (passed ? 0 : 1),
+    lastScore: score,
+    lastReviewedAt: Date.now(),
+  };
+  profileData.reviews.push({
+    wordId: currentCard.id,
+    score,
+    boxBefore: previous.box,
+    boxAfter: outcome.box,
+    date: todayKey(),
+    at: Date.now(),
+  });
+  updateGamification(score);
   await saveProfileData();
 }
 
@@ -583,6 +650,9 @@ function renderTracker() {
   $("reviewedToday").textContent = reviews.filter((review) => review.date === todayKey()).length;
   $("accuracyRate").textContent = reviews.length ? `${Math.round((correct / reviews.length) * 100)}%` : "0%";
   $("streakDays").textContent = calculateStreak(reviews);
+  $("pointsTotal").textContent = profileData.stats.points;
+  $("levelNumber").textContent = calculateLevel(profileData.stats.points);
+  renderDailyGoal();
 
   const counts = [1, 2, 3, 4, 5].map((box) => Object.values(profileData.progress).filter((item) => item.box === box).length);
   const max = Math.max(1, ...counts);
@@ -595,6 +665,13 @@ function renderTracker() {
   `).join("");
 }
 
+function renderDailyGoal() {
+  const reviewed = todayReviewCount();
+  const progress = Math.min(100, Math.round((reviewed / DAILY_GOAL) * 100));
+  $("dailyGoalText").textContent = `${Math.min(reviewed, DAILY_GOAL)}/${DAILY_GOAL}`;
+  $("dailyGoalBar").style.width = `${progress}%`;
+}
+
 function calculateStreak(reviews) {
   const days = new Set(reviews.map((review) => review.date));
   let streak = 0;
@@ -604,6 +681,42 @@ function calculateStreak(reviews) {
     date.setDate(date.getDate() - 1);
   }
   return streak;
+}
+
+function todayReviewCount() {
+  return profileData.reviews.filter((review) => review.date === todayKey()).length;
+}
+
+function updateGamification(score) {
+  const today = todayKey();
+  const yesterday = dateOffsetKey(-1);
+  const stats = { ...defaultProfileData.stats, ...profileData.stats };
+  if (stats.lastReviewDate !== today) {
+    stats.streak = stats.lastReviewDate === yesterday ? stats.streak + 1 : 1;
+    stats.lastReviewDate = today;
+  }
+  stats.bestStreak = Math.max(stats.bestStreak, stats.streak);
+  stats.points += scorePoints(score);
+  const reviewedToday = todayReviewCount();
+  if (reviewedToday === DAILY_GOAL) stats.points += 20;
+  profileData.stats = stats;
+}
+
+function scorePoints(score) {
+  if (score === "again") return 1;
+  if (score === "hard") return 3;
+  if (score === "easy") return 7;
+  return 5;
+}
+
+function calculateLevel(points) {
+  return Math.max(1, Math.floor(Math.sqrt(Math.max(0, points) / 25)) + 1);
+}
+
+function dateOffsetKey(offsetDays) {
+  const date = new Date();
+  date.setDate(date.getDate() + offsetDays);
+  return date.toISOString().slice(0, 10);
 }
 
 function renderVocabTable() {
@@ -647,7 +760,37 @@ function mergeProfileData(local, remote) {
     profile: local.profile,
     progress: { ...(remote.progress || {}), ...(local.progress || {}) },
     reviews: [...(remote.reviews || []), ...(local.reviews || [])],
+    stats: {
+      ...defaultProfileData.stats,
+      ...(remote.stats || {}),
+      points: Math.max(remote.stats?.points || 0, local.stats?.points || 0),
+      streak: Math.max(remote.stats?.streak || 0, local.stats?.streak || 0),
+      bestStreak: Math.max(remote.stats?.bestStreak || 0, local.stats?.bestStreak || 0),
+      lastReviewDate: [remote.stats?.lastReviewDate, local.stats?.lastReviewDate].filter(Boolean).sort().at(-1) || "",
+    },
   };
+}
+
+function applyLeitnerOutcome(currentBox, score) {
+  const box = Math.max(1, Math.min(5, Number(currentBox) || 1));
+  if (score === "again") return { box: 1 };
+  if (score === "hard") return { box: Math.max(1, box - 1) };
+  if (score === "easy") return { box: Math.min(5, box + 2) };
+  return { box: Math.min(5, box + 1) };
+}
+
+function dailyCardRank(wordId) {
+  const seed = `${profileData.profile.id || "local"}|${todayKey()}|${wordId}`;
+  let hash = 2166136261;
+  for (let index = 0; index < seed.length; index += 1) {
+    hash ^= seed.charCodeAt(index);
+    hash = Math.imul(hash, 16777619);
+  }
+  return hash >>> 0;
+}
+
+function profileIdFromName(name) {
+  return slugify(name).slice(0, 80);
 }
 
 function escapeHtml(value) {

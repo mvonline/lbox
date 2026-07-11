@@ -25,22 +25,19 @@
         <div id="profileWelcome" class="profile-welcome">
           <div class="profile-copy">
             <p class="eyebrow">Learner profile</p>
-            <h2>Start learning with a profile code</h2>
+            <h2>Start learning with your name</h2>
             <p id="profileStatus" class="hint" role="status"></p>
           </div>
           <div class="profile-form panel">
             <div class="profile-mode" role="group" aria-label="Profile mode">
               <button id="createProfileMode" class="mode-btn active" type="button">New profile</button>
-              <button id="resumeProfileMode" class="mode-btn" type="button">Use code</button>
+              <button id="resumeProfileMode" class="mode-btn" type="button">Use name</button>
             </div>
             <label class="field" id="profileNameField">
-              <span>Name</span>
-              <input id="profileName" placeholder="Your name or nickname">
+              <span>Unique name</span>
+              <input id="profileName" placeholder="Your name or nickname" autocomplete="username">
             </label>
-            <label class="field">
-              <span>Profile code</span>
-              <input id="profileCode" placeholder="Leave empty for a new code">
-            </label>
+            <input id="profileCode" type="hidden">
             <button id="saveProfile" class="primary wide-button">Continue</button>
           </div>
         </div>
@@ -52,7 +49,7 @@
           </div>
           <div class="button-row">
             <button id="switchProfile">Switch profile</button>
-            <button id="copyProfile">Copy code</button>
+            <button id="copyProfile">Copy name</button>
           </div>
         </div>
         <div class="study-layout">
@@ -71,6 +68,22 @@
               <span>Category</span>
               <select id="studyCategory"></select>
             </label>
+            <label class="field">
+              <span>Session</span>
+              <select id="studyMode">
+                <option value="daily">Daily goal</option>
+                <option value="weekly">Weekly review</option>
+                <option value="due">All due</option>
+                <option value="new">New words</option>
+              </select>
+            </label>
+            <div class="goal-card">
+              <div>
+                <span>Today</span>
+                <strong id="dailyGoalText">0/10</strong>
+              </div>
+              <div class="bar"><i id="dailyGoalBar"></i></div>
+            </div>
           </aside>
 
           <article class="card-area" aria-live="polite">
@@ -85,9 +98,9 @@
               <div id="answerPanel" class="answer hidden">
                 <dl id="answerList"></dl>
                 <div class="review-actions">
-                  <button id="againBtn" class="danger">Again</button>
+                  <button id="againBtn" class="danger">Not passed</button>
                   <button id="hardBtn">Hard</button>
-                  <button id="goodBtn" class="primary">Good</button>
+                  <button id="goodBtn" class="primary">Passed</button>
                   <button id="easyBtn">Easy</button>
                 </div>
               </div>
@@ -106,6 +119,8 @@
           <div class="panel"><strong id="reviewedToday">0</strong><span>Reviewed today</span></div>
           <div class="panel"><strong id="accuracyRate">0%</strong><span>Accuracy</span></div>
           <div class="panel"><strong id="streakDays">0</strong><span>Day streak</span></div>
+          <div class="panel"><strong id="pointsTotal">0</strong><span>Points</span></div>
+          <div class="panel"><strong id="levelNumber">1</strong><span>Level</span></div>
         </div>
         <div class="panel">
           <h3>Boxes</h3>
@@ -174,7 +189,7 @@
       <section id="profile" class="view" aria-labelledby="profileTitle">
         <div class="panel profile-panel">
           <h2 id="profileTitle">Profile</h2>
-          <p class="hint">Vocabulary is shared for everyone. Profile codes only store each learner's review progress.</p>
+          <p class="hint">Vocabulary is shared for everyone. Unique profile names store each learner's review progress.</p>
           <div class="debug-panel">
             <div class="section-head">
               <h3>Sync log</h3>
