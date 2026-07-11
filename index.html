@@ -15,7 +15,7 @@
       <nav class="tabs" aria-label="App sections">
         <button class="tab active" data-view="study">Study</button>
         <button class="tab" data-view="tracker">Tracker</button>
-        <button class="tab" data-view="admin">Admin</button>
+        <button class="tab" data-view="admin" id="adminTab">Admin</button>
         <button class="tab" data-view="profile">Profile</button>
       </nav>
     </header>
@@ -51,6 +51,10 @@
             <label class="field">
               <span>Study language</span>
               <select id="studyLanguage"></select>
+            </label>
+            <label class="field">
+              <span>Category</span>
+              <select id="studyCategory"></select>
             </label>
           </aside>
 
@@ -95,34 +99,59 @@
       </section>
 
       <section id="admin" class="view" aria-labelledby="adminTitle">
-        <div class="section-head">
-          <h2 id="adminTitle">Vocabulary admin</h2>
-          <button id="downloadCsv">Download merged CSV</button>
-        </div>
-        <div class="panel">
-          <p class="hint">CSV columns: lang1, lang2, lang3. Optional first row headers are accepted.</p>
+        <div id="adminLogin" class="panel admin-login">
+          <h2 id="adminTitle">Admin login</h2>
+          <p class="hint">Admin access controls shared vocabulary uploads on this device.</p>
           <label class="field">
-            <span>Language names</span>
-            <input id="languageNames" placeholder="English, Swedish, Persian">
+            <span>Username</span>
+            <input id="adminUsername" autocomplete="username">
           </label>
           <label class="field">
-            <span>Import CSV</span>
-            <input id="csvFile" type="file" accept=".csv,text/csv">
+            <span>Password</span>
+            <input id="adminPassword" type="password" autocomplete="current-password">
           </label>
-          <textarea id="csvPaste" rows="8" placeholder="hello,hej,سلام"></textarea>
           <div class="button-row">
-            <button id="importPasted" class="primary">Import pasted CSV</button>
-            <button id="clearVocab" class="danger">Clear vocabulary</button>
+            <button id="adminLoginBtn" class="primary">Unlock admin</button>
           </div>
-          <p id="importResult" class="hint" role="status"></p>
+          <p id="adminStatus" class="hint" role="status"></p>
         </div>
-        <div class="panel">
-          <h3>Current vocabulary</h3>
-          <div class="table-wrap">
-            <table>
-              <thead id="vocabHead"></thead>
-              <tbody id="vocabTable"></tbody>
-            </table>
+        <div id="adminTools" class="hidden">
+          <div class="section-head">
+            <h2>Vocabulary admin</h2>
+            <div class="button-row">
+              <button id="downloadCsv">Download merged CSV</button>
+              <button id="adminLogout">Lock admin</button>
+            </div>
+          </div>
+          <div class="panel">
+            <p class="hint">CSV columns: lang1, lang2, lang3. Optional first row headers are accepted.</p>
+            <label class="field">
+              <span>Language names</span>
+              <input id="languageNames" placeholder="English, Swedish, Persian">
+            </label>
+            <label class="field">
+              <span>Upload category</span>
+              <input id="categoryName" placeholder="Fashion, Economy, IT">
+            </label>
+            <label class="field">
+              <span>Import CSV</span>
+              <input id="csvFile" type="file" accept=".csv,text/csv">
+            </label>
+            <textarea id="csvPaste" rows="8" placeholder="hello,hej,سلام"></textarea>
+            <div class="button-row">
+              <button id="importPasted" class="primary">Import pasted CSV</button>
+              <button id="clearVocab" class="danger">Clear vocabulary</button>
+            </div>
+            <p id="importResult" class="hint" role="status"></p>
+          </div>
+          <div class="panel">
+            <h3>Current vocabulary</h3>
+            <div class="table-wrap">
+              <table>
+                <thead id="vocabHead"></thead>
+                <tbody id="vocabTable"></tbody>
+              </table>
+            </div>
           </div>
         </div>
       </section>

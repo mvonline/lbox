@@ -12,11 +12,15 @@ const BOX_INTERVALS = [0, 1, 3, 7, 14, 30];
 const STORAGE_KEY = "lighner-box-state-v1";
 const APP_STORAGE_KEY = "lighner-box-app-v2";
 const PROFILE_STORAGE_KEY = "lighner-box-profile-v2";
+const ADMIN_SESSION_KEY = "lighner-box-admin-session-v1";
+const ADMIN_USERNAME = "admin";
+const ADMIN_PASSWORD = "lbox-admin";
 const todayKey = () => new Date().toISOString().slice(0, 10);
 const uid = () => crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`;
 
 const defaultAppData = {
   languages: ["English", "Swedish", "Persian"],
+  categories: [{ id: "general", name: "General" }],
   vocab: [],
 };
 
@@ -32,6 +36,7 @@ let currentCard = null;
 let cloud = null;
 let statusMessage = "";
 let logs = [];
+let adminUnlocked = sessionStorage.getItem(ADMIN_SESSION_KEY) === "true";
 
 const $ = (id) => document.getElementById(id);
 
@@ -84,9 +89,11 @@ function loadLegacyState() {
 }
 
 function pickAppData(data) {
+  const categories = normalizeCategories(data.categories);
   return {
     languages: Array.isArray(data.languages) && data.languages.length === 3 ? data.languages : defaultAppData.languages,
-    vocab: Array.isArray(data.vocab) ? data.vocab : [],
+    categories,
+    vocab: normalizeVocab(data.vocab, categories),
   };
 }
 
@@ -99,6 +106,12 @@ function pickProfileData(data) {
 }
 
 async function saveAppData() {
+  if (!adminUnlocked) {
+    const error = new Error("Admin login is required to change shared vocabulary");
+    setStatus(error.message);
+    logDebug("admin:blocked-write");
+    throw error;
+  }
   localStorage.setItem(APP_STORAGE_KEY, JSON.stringify(appData));
   logDebug("app:local-save", { words: appData.vocab.length });
   if (cloud) {
@@ -166,12 +179,20 @@ async function initCloud() {
       logDebug("app:cloud-load-start", { path: "app/main" });
       const snap = await firestore.getDoc(ref);
       const data = snap.exists() ? snap.data() : null;
-      logDebug("app:cloud-load-result", { exists: snap.exists(), words: data?.vocab?.length || 0 });
+      logDebug("app:cloud-load-result", {
+        exists: snap.exists(),
+        words: data?.vocab?.length || 0,
+        categories: data?.categories?.length || 0,
+      });
       return data ? pickAppData(data) : null;
     },
     async saveAppData(nextAppData) {
       const ref = firestore.doc(db, "app", "main");
-      logDebug("app:cloud-save-start", { path: "app/main", words: nextAppData.vocab.length });
+      logDebug("app:cloud-save-start", {
+        path: "app/main",
+        words: nextAppData.vocab.length,
+        categories: nextAppData.categories.length,
+      });
       await firestore.setDoc(ref, {
         ...nextAppData,
         updatedAt: firestore.serverTimestamp(),
@@ -198,8 +219,6 @@ async function initCloud() {
   if (remoteAppData) {
     appData = mergeAppData(appData, remoteAppData);
     localStorage.setItem(APP_STORAGE_KEY, JSON.stringify(appData));
-  } else if (appData.vocab.length) {
-    await cloud.saveAppData(appData);
   }
   setStatus("Cloud sync ready");
 }
@@ -217,6 +236,7 @@ function bindNavigation() {
 
 function bindStudy() {
   $("studyLanguage").addEventListener("change", renderStudy);
+  $("studyCategory").addEventListener("change", renderStudy);
   $("revealAnswer").addEventListener("click", () => $("answerPanel").classList.remove("hidden"));
   $("againBtn").addEventListener("click", () => review("again"));
   $("hardBtn").addEventListener("click", () => review("hard"));
@@ -256,6 +276,28 @@ function bindAdmin() {
     logs = [];
     renderLogs();
   });
+  $("adminLoginBtn").addEventListener("click", () => {
+    const username = $("adminUsername").value.trim();
+    const password = $("adminPassword").value;
+    if (username === ADMIN_USERNAME && password === ADMIN_PASSWORD) {
+      adminUnlocked = true;
+      sessionStorage.setItem(ADMIN_SESSION_KEY, "true");
+      $("adminPassword").value = "";
+      $("adminStatus").textContent = "Admin unlocked.";
+      logDebug("admin:login-ok", { username });
+      renderAdminGate();
+      return;
+    }
+    $("adminStatus").textContent = "Invalid admin credentials.";
+    logDebug("admin:login-failed", { username });
+  });
+  $("adminLogout").addEventListener("click", () => {
+    adminUnlocked = false;
+    sessionStorage.removeItem(ADMIN_SESSION_KEY);
+    $("adminStatus").textContent = "Admin locked.";
+    logDebug("admin:logout");
+    renderAdminGate();
+  });
 }
 
 function bindProfile() {
@@ -284,25 +326,37 @@ async function importCsv(text) {
   if (!rows.length) return;
 
   const first = rows[0].map((cell) => cell.toLowerCase());
-  const hasHeader = first.includes("lang1") || first.includes("language 1") || appData.languages.some((lang) => first.includes(lang.toLowerCase()));
+  const hasCategoryColumn = first[0] === "category";
+  const hasHeader = hasCategoryColumn || first.includes("lang1") || first.includes("language 1") || appData.languages.some((lang) => first.includes(lang.toLowerCase()));
   const dataRows = hasHeader ? rows.slice(1) : rows;
   const existing = new Map(appData.vocab.map((word) => [word.key, word]));
   let added = 0;
   let updated = 0;
+  const touchedCategories = new Set();
 
   for (const row of dataRows) {
-    const terms = row.slice(0, 3).map((cell) => cell.trim());
+    const rowCategory = hasCategoryColumn ? row[0] : $("categoryName").value;
+    const category = upsertCategory(rowCategory);
+    touchedCategories.add(category.name);
+    const offset = hasCategoryColumn ? 1 : 0;
+    const terms = row.slice(offset, offset + 3).map((cell) => cell.trim());
     if (terms.filter(Boolean).length < 2) continue;
     while (terms.length < 3) terms.push("");
-    const key = normalizeKey(terms);
-    const next = { id: existing.get(key)?.id || uid(), key, terms };
+    const key = normalizeKey(terms, category.id);
+    const next = {
+      id: existing.get(key)?.id || uid(),
+      key,
+      terms,
+      categoryId: category.id,
+      categoryName: category.name,
+    };
     if (existing.has(key)) updated += 1;
     else added += 1;
     existing.set(key, next);
   }
 
   appData.vocab = [...existing.values()].sort((a, b) => a.terms[0].localeCompare(b.terms[0]));
-  $("importResult").textContent = `Imported ${added} new and ${updated} updated words.`;
+  $("importResult").textContent = `Imported ${added} new and ${updated} updated words into ${[...touchedCategories].join(", ")}.`;
   await saveAppData();
 }
 
@@ -337,23 +391,26 @@ function parseCsv(text) {
   return rows;
 }
 
-function normalizeKey(terms) {
-  return terms.map((term) => term.trim().toLowerCase()).join("|");
+function normalizeKey(terms, categoryId = "general") {
+  return `${categoryId}|${terms.map((term) => term.trim().toLowerCase()).join("|")}`;
 }
 
 function render() {
   $("profileName").value = profileData.profile.name;
   $("profileCode").value = profileData.profile.code;
   $("languageNames").value = appData.languages.join(", ");
+  if (!$("categoryName").value) $("categoryName").value = appData.categories[0]?.name || "General";
   if (!statusMessage) {
     $("syncStatus").textContent = profileData.profile.code
       ? `${cloud ? "Cloud" : "Local"} profile: ${profileData.profile.code}`
       : cloud ? "Cloud sync ready" : "Local profile";
   }
   renderStudyLanguage();
+  renderStudyCategory();
   renderStudy();
   renderTracker();
   renderVocabTable();
+  renderAdminGate();
   renderLogs();
 }
 
@@ -390,6 +447,12 @@ function renderLogs() {
   }).join("\n");
 }
 
+function renderAdminGate() {
+  $("adminLogin").classList.toggle("hidden", adminUnlocked);
+  $("adminTools").classList.toggle("hidden", !adminUnlocked);
+  $("adminTab").textContent = adminUnlocked ? "Admin" : "Admin lock";
+}
+
 function withTimeout(promise, milliseconds, message) {
   return Promise.race([
     promise,
@@ -409,6 +472,16 @@ function renderStudyLanguage() {
   const selected = select.value || "0";
   select.innerHTML = appData.languages.map((lang, index) => `<option value="${index}">${escapeHtml(lang)}</option>`).join("");
   select.value = selected;
+}
+
+function renderStudyCategory() {
+  const select = $("studyCategory");
+  const selected = select.value || "all";
+  select.innerHTML = [
+    '<option value="all">All categories</option>',
+    ...appData.categories.map((category) => `<option value="${escapeHtml(category.id)}">${escapeHtml(category.name)}</option>`),
+  ].join("");
+  select.value = appData.categories.some((category) => category.id === selected) ? selected : "all";
 }
 
 function renderStudy() {
@@ -435,7 +508,9 @@ function renderStudy() {
 
 function dueCards() {
   const now = Date.now();
+  const categoryId = $("studyCategory").value || "all";
   return appData.vocab.filter((word) => {
+    if (categoryId !== "all" && word.categoryId !== categoryId) return false;
     const progress = profileData.progress[word.id];
     return !progress || progress.dueAt <= now;
   });
@@ -484,15 +559,15 @@ function calculateStreak(reviews) {
 }
 
 function renderVocabTable() {
-  $("vocabHead").innerHTML = `<tr>${appData.languages.map((lang) => `<th>${escapeHtml(lang)}</th>`).join("")}<th>Box</th></tr>`;
+  $("vocabHead").innerHTML = `<tr><th>Category</th>${appData.languages.map((lang) => `<th>${escapeHtml(lang)}</th>`).join("")}<th>Box</th></tr>`;
   $("vocabTable").innerHTML = appData.vocab.map((word) => {
     const box = profileData.progress[word.id]?.box || 1;
-    return `<tr>${word.terms.map((term) => `<td>${escapeHtml(term)}</td>`).join("")}<td>${box}</td></tr>`;
+    return `<tr><td>${escapeHtml(word.categoryName || "General")}</td>${word.terms.map((term) => `<td>${escapeHtml(term)}</td>`).join("")}<td>${box}</td></tr>`;
   }).join("");
 }
 
 function downloadCsv() {
-  const rows = [appData.languages, ...appData.vocab.map((word) => word.terms)];
+  const rows = [["Category", ...appData.languages], ...appData.vocab.map((word) => [word.categoryName || "General", ...word.terms])];
   const csv = rows.map((row) => row.map(csvCell).join(",")).join("\n");
   const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
   const url = URL.createObjectURL(blob);
@@ -509,10 +584,12 @@ function csvCell(value) {
 }
 
 function mergeAppData(local, remote) {
-  const vocab = new Map((remote.vocab || []).map((word) => [word.key, word]));
-  (local.vocab || []).forEach((word) => vocab.set(word.key, word));
+  const categories = mergeCategories(remote.categories, local.categories);
+  const vocab = new Map(normalizeVocab(remote.vocab, categories).map((word) => [word.key, word]));
+  normalizeVocab(local.vocab, categories).forEach((word) => vocab.set(word.key, word));
   return {
     languages: local.languages.length === 3 ? local.languages : remote.languages,
+    categories,
     vocab: [...vocab.values()],
   };
 }
@@ -533,4 +610,62 @@ function escapeHtml(value) {
     '"': "&quot;",
     "'": "&#39;",
   })[char]);
+}
+
+function upsertCategory(name) {
+  const cleanName = (name || "General").trim() || "General";
+  const existing = appData.categories.find((category) => category.name.toLowerCase() === cleanName.toLowerCase());
+  if (existing) return existing;
+  const category = { id: slugify(cleanName), name: cleanName };
+  const usedIds = new Set(appData.categories.map((item) => item.id));
+  let uniqueId = category.id;
+  let index = 2;
+  while (usedIds.has(uniqueId)) {
+    uniqueId = `${category.id}-${index}`;
+    index += 1;
+  }
+  category.id = uniqueId;
+  appData.categories.push(category);
+  return category;
+}
+
+function normalizeCategories(categories) {
+  const source = Array.isArray(categories) && categories.length ? categories : defaultAppData.categories;
+  const seen = new Set();
+  return source.map((category) => {
+    const name = String(category.name || "General").trim() || "General";
+    let id = String(category.id || slugify(name)).trim() || "general";
+    while (seen.has(id)) id = `${id}-copy`;
+    seen.add(id);
+    return { id, name };
+  });
+}
+
+function mergeCategories(remote = [], local = []) {
+  const byName = new Map();
+  [...normalizeCategories(remote), ...normalizeCategories(local)].forEach((category) => {
+    byName.set(category.name.toLowerCase(), category);
+  });
+  return [...byName.values()];
+}
+
+function normalizeVocab(vocab, categories) {
+  const categoryMap = new Map(categories.map((category) => [category.id, category]));
+  const fallback = categories[0] || defaultAppData.categories[0];
+  return Array.isArray(vocab) ? vocab.map((word) => {
+    const category = categoryMap.get(word.categoryId) || fallback;
+    const terms = Array.isArray(word.terms) ? word.terms.slice(0, 3) : [];
+    while (terms.length < 3) terms.push("");
+    return {
+      id: word.id || uid(),
+      key: normalizeKey(terms, category.id),
+      terms,
+      categoryId: category.id,
+      categoryName: category.name,
+    };
+  }) : [];
+}
+
+function slugify(value) {
+  return value.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "general";
 }

@@ -295,6 +295,10 @@ td {
   max-width: 680px;
 }
 
+.admin-login {
+  max-width: 520px;
+}
+
 .debug-panel {
   margin-top: 18px;
 }
