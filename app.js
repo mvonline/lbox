@@ -240,11 +240,6 @@ async function initCloud() {
 }
 
 function bindNavigation() {
-  $("menuToggle").addEventListener("click", () => {
-    const nav = $("mainNav");
-    const isOpen = nav.classList.toggle("open");
-    $("menuToggle").setAttribute("aria-expanded", String(isOpen));
-  });
   document.querySelectorAll(".tab").forEach((tab) => {
     tab.addEventListener("click", () => showView(tab.dataset.view));
   });
@@ -257,8 +252,6 @@ function showView(viewId) {
   const tab = document.querySelector(`.tab[data-view="${viewId}"]`);
   if (tab) tab.classList.add("active");
   view.classList.add("active");
-  $("mainNav").classList.remove("open");
-  $("menuToggle").setAttribute("aria-expanded", "false");
   render();
 }
 
@@ -273,7 +266,10 @@ function bindStudy() {
   $("studyLabel").addEventListener("change", renderStudy);
   $("studyMode").addEventListener("change", renderStudy);
   $("studyOrder").addEventListener("change", renderStudy);
-  $("revealAnswer").addEventListener("click", () => $("answerPanel").classList.remove("hidden"));
+  $("revealAnswer").addEventListener("click", () => {
+    $("answerPanel").classList.remove("hidden");
+    $("revealAnswer").classList.add("hidden");
+  });
   $("againBtn").addEventListener("click", () => review("again"));
   $("hardBtn").addEventListener("click", () => review("hard"));
   $("goodBtn").addEventListener("click", () => review("good"));
@@ -307,6 +303,15 @@ function bindStudy() {
   $("manualLabel").addEventListener("change", () => {
     manualVisibleCount = MANUAL_BATCH_SIZE;
     renderManualReviewList();
+  });
+  $("upNextList").addEventListener("click", (event) => {
+    const button = event.target.closest("[data-next-word]");
+    if (!button) return;
+    const word = appData.vocab.find((item) => item.id === button.dataset.nextWord);
+    if (!word) return;
+    currentCard = word;
+    renderSelectedCard(word);
+    $("flashcard").scrollIntoView({ behavior: "smooth", block: "center" });
   });
   $("resetProgress").addEventListener("click", async () => {
     profileData.progress = {};
@@ -577,7 +582,9 @@ function renderLogs() {
 function renderAdminGate() {
   $("adminLogin").classList.toggle("hidden", adminUnlocked);
   $("adminTools").classList.toggle("hidden", !adminUnlocked);
-  $("adminTab").textContent = adminUnlocked ? "Admin" : "Admin lock";
+  const adminLabel = adminUnlocked ? "Admin" : "Admin (locked)";
+  $("adminTab").setAttribute("aria-label", adminLabel);
+  $("adminTab").title = adminLabel;
 }
 
 function setProfileMode(mode) {
@@ -667,6 +674,7 @@ function renderStudy() {
   $("emptyStudy").classList.toggle("hidden", Boolean(currentCard));
   $("flashcard").classList.toggle("hidden", !currentCard);
   $("answerPanel").classList.add("hidden");
+  renderUpNext(due);
   if (!currentCard) {
     renderEmptyStudyMessage();
     return;
@@ -675,14 +683,46 @@ function renderStudy() {
   renderSelectedCard(currentCard);
 }
 
+function renderUpNext(due) {
+  const list = $("upNextList");
+  if (!list) return;
+  const promptIndex = Number($("studyLanguage").value || profileData.profile.targetLanguageIndex || 0);
+  const upcoming = due.slice(1, 6);
+  if (!upcoming.length) {
+    list.innerHTML = '<p class="up-next-empty">No more words in this session.</p>';
+    return;
+  }
+  list.innerHTML = upcoming.map((word) => {
+    const box = profileData.progress[word.id]?.box || 1;
+    const term = word.terms[promptIndex] || word.terms.find(Boolean) || "";
+    return `
+      <button class="up-next-item" type="button" data-next-word="${escapeHtml(word.id)}">
+        <span class="word">${escapeHtml(term)}</span>
+        <span class="pill">Box ${box}</span>
+      </button>
+    `;
+  }).join("");
+}
+
+function renderBoxSteps(box) {
+  const steps = $("boxSteps");
+  if (!steps) return;
+  steps.innerHTML = [1, 2, 3, 4, 5].map((step) => {
+    const state = step < box ? "done" : step === box ? "current" : "";
+    return `<span class="box-step ${state}"></span>`;
+  }).join("");
+}
+
 function renderSelectedCard(card) {
   const promptIndex = Number($("studyLanguage").value || profileData.profile.targetLanguageIndex || 0);
   $("emptyStudy").classList.add("hidden");
   $("flashcard").classList.remove("hidden");
   $("answerPanel").classList.add("hidden");
+  $("revealAnswer").classList.remove("hidden");
   $("cardPrompt").textContent = card.terms[promptIndex] || card.terms.find(Boolean);
   const progress = profileData.progress[card.id] || { box: 1 };
   $("cardBox").textContent = `Box ${progress.box}`;
+  renderBoxSteps(progress.box);
   $("answerList").innerHTML = card.terms.map((term, index) => `
     <dt>${escapeHtml(appData.languages[index] || `Lang ${index + 1}`)}</dt>
     <dd>${escapeHtml(term || "-")}</dd>

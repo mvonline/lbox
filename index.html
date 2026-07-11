@@ -2,23 +2,43 @@
 <html lang="en">
   <head>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="theme-color" content="#0f766e">
     <title>Lighner Box</title>
     <link rel="stylesheet" href="styles.css">
   </head>
   <body>
     <header class="topbar">
-      <div>
-        <h1>Lighner Box</h1>
-        <p id="syncStatus">Local profile</p>
+      <div class="brand">
+        <span class="brand-mark" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+        </span>
+        <div class="brand-copy">
+          <h1>Lighner Box</h1>
+          <p id="syncStatus">Local profile</p>
+        </div>
       </div>
-      <button id="menuToggle" class="menu-toggle" type="button" aria-expanded="false" aria-controls="mainNav">Menu</button>
       <nav id="mainNav" class="tabs" aria-label="App sections">
-        <button class="tab active" data-view="study">Study</button>
-        <button class="tab" data-view="manual">Manual</button>
-        <button class="tab" data-view="tracker">Tracker</button>
-        <button class="tab" data-view="admin" id="adminTab">Admin</button>
-        <button class="tab" data-view="profile">Profile</button>
+        <button class="tab active" data-view="study" type="button" aria-label="Study" title="Study">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="6" width="13" height="15" rx="2"/><path d="M8 3h11a2 2 0 0 1 2 2v13"/><path d="m7 14 2 2 3.5-4"/></svg>
+          <span class="tab-label">Study</span>
+        </button>
+        <button class="tab" data-view="manual" type="button" aria-label="Manual review" title="Manual review">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 6h10M11 12h10M11 18h10"/><path d="m3 5 1.5 1.5L7 4M3 11l1.5 1.5L7 10M3 17l1.5 1.5L7 16"/></svg>
+          <span class="tab-label">Manual</span>
+        </button>
+        <button class="tab" data-view="tracker" type="button" aria-label="Tracker" title="Tracker">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3v18h18"/><path d="M8 17v-5M13 17V8M18 17v-8"/></svg>
+          <span class="tab-label">Tracker</span>
+        </button>
+        <button class="tab" data-view="admin" id="adminTab" type="button" aria-label="Admin" title="Admin">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="5" y1="21" x2="5" y2="14"/><line x1="5" y1="10" x2="5" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="19" y1="21" x2="19" y2="16"/><line x1="19" y1="12" x2="19" y2="3"/><line x1="2" y1="14" x2="8" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="16" y1="16" x2="22" y2="16"/></svg>
+          <span class="tab-label">Admin</span>
+        </button>
+        <button class="tab" data-view="profile" type="button" aria-label="Profile" title="Profile">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          <span class="tab-label">Profile</span>
+        </button>
       </nav>
     </header>
 
@@ -48,47 +68,72 @@
             <button id="saveProfile" class="primary wide-button">Continue</button>
           </div>
         </div>
-        <div id="activeProfileBar" class="panel active-profile hidden">
-          <div>
-            <span>Active profile</span>
-            <strong id="activeProfileName">My profile</strong>
-            <p id="activeProfileCode" class="hint"></p>
+
+        <div id="activeProfileBar" class="active-profile hidden">
+          <div class="active-profile-id">
+            <span class="avatar" aria-hidden="true"></span>
+            <div>
+              <strong id="activeProfileName">My profile</strong>
+              <p id="activeProfileCode" class="hint"></p>
+            </div>
           </div>
           <div class="button-row">
-            <button id="switchProfile">Switch profile</button>
-            <button id="copyProfile">Copy name</button>
+            <button id="switchProfile" class="ghost">Switch</button>
+            <button id="copyProfile" class="ghost">Copy name</button>
           </div>
         </div>
+
         <div class="study-layout hidden">
+          <div class="session-strip" aria-label="Session progress">
+            <div class="goal-card">
+              <div class="goal-copy">
+                <span>Today's goal</span>
+                <strong id="dailyGoalText">0/10</strong>
+              </div>
+              <div class="bar"><i id="dailyGoalBar"></i></div>
+            </div>
+            <div class="stats-grid">
+              <div class="stat-chip"><strong id="dueCount">0</strong><span>Due</span></div>
+              <div class="stat-chip"><strong id="newCount">0</strong><span>New</span></div>
+              <div class="stat-chip"><strong id="knownCount">0</strong><span>Known</span></div>
+            </div>
+          </div>
+
           <article class="card-area" aria-live="polite">
             <div id="emptyStudy" class="empty-state">
               <h2>No words due</h2>
               <p>Add vocabulary in Admin or come back when cards are scheduled.</p>
             </div>
             <div id="flashcard" class="flashcard hidden">
-              <p id="cardBox" class="box-label">Box 1</p>
+              <div class="card-meta">
+                <p id="cardBox" class="box-label">Box 1</p>
+                <div id="boxSteps" class="box-steps" aria-hidden="true"></div>
+              </div>
               <h2 id="cardPrompt"></h2>
-              <button id="revealAnswer" class="primary">Reveal answer</button>
+              <button id="revealAnswer" class="primary reveal-button">Reveal answer</button>
               <div id="answerPanel" class="answer hidden">
                 <dl id="answerList"></dl>
-                <p class="hint">Not passed resets the card. Hard moves it down. Passed moves it up. Easy moves it ahead faster.</p>
                 <div class="review-actions">
-                  <button id="againBtn" class="danger">Not passed</button>
-                  <button id="hardBtn">Hard</button>
-                  <button id="goodBtn" class="primary">Passed</button>
-                  <button id="easyBtn">Easy</button>
+                  <button id="againBtn" class="grade grade-again"><em>✕</em>Not passed</button>
+                  <button id="hardBtn" class="grade grade-hard"><em>~</em>Hard</button>
+                  <button id="goodBtn" class="grade grade-good"><em>✓</em>Passed</button>
+                  <button id="easyBtn" class="grade grade-easy"><em>✓✓</em>Easy</button>
                 </div>
+                <p class="hint grade-hint">Not passed resets to Box 1 · Hard moves down · Passed moves up · Easy jumps two boxes</p>
               </div>
             </div>
           </article>
 
+          <section class="panel up-next" aria-label="Upcoming words">
+            <h3>Up next</h3>
+            <div id="upNextList" class="up-next-list"></div>
+          </section>
+
           <details class="panel study-options">
-            <summary id="studyTitle">Options and progress</summary>
-            <div class="stats-grid">
-              <div><strong id="dueCount">0</strong><span>Due</span></div>
-              <div><strong id="newCount">0</strong><span>New</span></div>
-              <div><strong id="knownCount">0</strong><span>Known</span></div>
-            </div>
+            <summary id="studyTitle">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M4 6h16M7 12h10M10 18h4"/></svg>
+              Session options
+            </summary>
             <div class="study-controls">
               <label class="field">
                 <span>Main word language</span>
@@ -125,13 +170,6 @@
                 </select>
               </label>
             </div>
-            <div class="goal-card">
-              <div>
-                <span>Today</span>
-                <strong id="dailyGoalText">0/10</strong>
-              </div>
-              <div class="bar"><i id="dailyGoalBar"></i></div>
-            </div>
           </details>
         </div>
       </section>
@@ -165,12 +203,12 @@
           <button id="resetProgress" class="danger">Reset progress</button>
         </div>
         <div class="tracker-grid">
-          <div class="panel"><strong id="totalWords">0</strong><span>Total words</span></div>
-          <div class="panel"><strong id="reviewedToday">0</strong><span>Reviewed today</span></div>
-          <div class="panel"><strong id="accuracyRate">0%</strong><span>Accuracy</span></div>
-          <div class="panel"><strong id="streakDays">0</strong><span>Day streak</span></div>
-          <div class="panel"><strong id="pointsTotal">0</strong><span>XP</span></div>
-          <div class="panel"><strong id="levelNumber">1</strong><span>Level</span></div>
+          <div class="panel stat-tile"><strong id="totalWords">0</strong><span>Total words</span></div>
+          <div class="panel stat-tile"><strong id="reviewedToday">0</strong><span>Reviewed today</span></div>
+          <div class="panel stat-tile"><strong id="accuracyRate">0%</strong><span>Accuracy</span></div>
+          <div class="panel stat-tile"><strong id="streakDays">0</strong><span>Day streak</span></div>
+          <div class="panel stat-tile"><strong id="pointsTotal">0</strong><span>XP</span></div>
+          <div class="panel stat-tile"><strong id="levelNumber">1</strong><span>Level</span></div>
         </div>
         <div class="progress-panels">
           <div class="panel">
@@ -233,8 +271,8 @@
           <div class="section-head">
             <h2>Vocabulary admin</h2>
             <div class="button-row">
-              <button id="downloadCsv">Download merged CSV</button>
-              <button id="adminLogout">Lock admin</button>
+              <button id="downloadCsv" class="ghost">Download merged CSV</button>
+              <button id="adminLogout" class="ghost">Lock admin</button>
             </div>
           </div>
           <div class="panel">
@@ -281,7 +319,7 @@
           <div class="debug-panel">
             <div class="section-head">
               <h3>Sync log</h3>
-              <button id="clearLogs">Clear logs</button>
+              <button id="clearLogs" class="ghost">Clear logs</button>
             </div>
             <pre id="debugLog"></pre>
           </div>
