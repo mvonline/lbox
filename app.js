@@ -17,17 +17,19 @@ const PROFILE_MODE_KEY = "lighner-box-profile-mode-v1";
 const ADMIN_USERNAME = "admin";
 const ADMIN_PASSWORD = "lbox-admin";
 const DAILY_GOAL = 10;
+const XP_BY_SCORE = { again: 1, hard: 3, good: 6, easy: 8 };
 const todayKey = () => new Date().toISOString().slice(0, 10);
 const uid = () => crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`;
 
 const defaultAppData = {
   languages: ["English", "Swedish", "Persian"],
   categories: [{ id: "general", name: "General" }],
+  labels: [],
   vocab: [],
 };
 
 const defaultProfileData = {
-  profile: { name: "", id: "", code: "", cloudUserId: "" },
+  profile: { name: "", id: "", code: "", cloudUserId: "", targetLanguageIndex: 0 },
   progress: {},
   reviews: [],
   stats: { points: 0, lastReviewDate: "", streak: 0, bestStreak: 0 },
@@ -41,6 +43,7 @@ let statusMessage = "";
 let logs = [];
 let adminUnlocked = sessionStorage.getItem(ADMIN_SESSION_KEY) === "true";
 let profileMode = sessionStorage.getItem(PROFILE_MODE_KEY) || "create";
+let manualReviewFilter = "all";
 
 const $ = (id) => document.getElementById(id);
 
@@ -94,10 +97,12 @@ function loadLegacyState() {
 
 function pickAppData(data) {
   const categories = normalizeCategories(data.categories);
+  const labels = mergeLabels(data.labels, collectLabelsFromVocab(data.vocab));
   return {
     languages: Array.isArray(data.languages) && data.languages.length === 3 ? data.languages : defaultAppData.languages,
     categories,
-    vocab: normalizeVocab(data.vocab, categories),
+    labels,
+    vocab: normalizeVocab(data.vocab, categories, labels),
   };
 }
 
@@ -244,14 +249,37 @@ function bindNavigation() {
 }
 
 function bindStudy() {
-  $("studyLanguage").addEventListener("change", renderStudy);
+  $("studyLanguage").addEventListener("change", async () => {
+    profileData.profile.targetLanguageIndex = Number($("studyLanguage").value || 0);
+    $("profileTargetLanguage").value = String(profileData.profile.targetLanguageIndex);
+    renderStudy();
+    if (profileData.profile.id) await saveProfileData();
+  });
   $("studyCategory").addEventListener("change", renderStudy);
+  $("studyLabel").addEventListener("change", renderStudy);
   $("studyMode").addEventListener("change", renderStudy);
+  $("studyOrder").addEventListener("change", renderStudy);
   $("revealAnswer").addEventListener("click", () => $("answerPanel").classList.remove("hidden"));
   $("againBtn").addEventListener("click", () => review("again"));
   $("hardBtn").addEventListener("click", () => review("hard"));
   $("goodBtn").addEventListener("click", () => review("good"));
   $("easyBtn").addEventListener("click", () => review("easy"));
+  document.querySelectorAll(".manual-filter").forEach((button) => {
+    button.addEventListener("click", () => {
+      manualReviewFilter = button.dataset.filter;
+      renderManualReviewList();
+    });
+  });
+  $("manualReviewList").addEventListener("click", (event) => {
+    const button = event.target.closest("[data-review-word]");
+    if (!button) return;
+    const word = appData.vocab.find((item) => item.id === button.dataset.reviewWord);
+    if (!word) return;
+    currentCard = word;
+    renderSelectedCard(word);
+    $("flashcard").scrollIntoView({ behavior: "smooth", block: "center" });
+  });
+  $("manualLabel").addEventListener("change", renderManualReviewList);
   $("resetProgress").addEventListener("click", async () => {
     profileData.progress = {};
     profileData.reviews = [];
@@ -336,6 +364,11 @@ function bindProfile() {
     await navigator.clipboard.writeText(profileData.profile.name);
     setStatus(`Copied profile name: ${profileData.profile.name}`);
   });
+  $("profileTargetLanguage").addEventListener("change", () => {
+    profileData.profile.targetLanguageIndex = Number($("profileTargetLanguage").value || 0);
+    $("studyLanguage").value = String(profileData.profile.targetLanguageIndex);
+    renderStudy();
+  });
 }
 
 async function saveProfile() {
@@ -347,6 +380,7 @@ async function saveProfile() {
     }
     const profileId = profileIdFromName(name);
     const previousProfileId = profileData.profile.id;
+    const targetLanguageIndex = Number($("profileTargetLanguage").value || 0);
     if (cloud) {
       const remote = await cloud.loadProfile(profileId);
       if (profileMode === "create" && remote) {
@@ -360,14 +394,14 @@ async function saveProfile() {
         profileData.progress = {};
         profileData.reviews = [];
       }
-      profileData.profile = { ...profileData.profile, name, id: profileId, code: profileId };
+      profileData.profile = { ...profileData.profile, name, id: profileId, code: profileId, targetLanguageIndex };
     } else if (previousProfileId !== profileId) {
       profileData = {
         ...structuredClone(defaultProfileData),
-        profile: { name, id: profileId, code: profileId, cloudUserId: profileData.profile.cloudUserId },
+        profile: { name, id: profileId, code: profileId, cloudUserId: profileData.profile.cloudUserId, targetLanguageIndex },
       };
     } else {
-      profileData.profile = { ...profileData.profile, name, id: profileId, code: profileId };
+      profileData.profile = { ...profileData.profile, name, id: profileId, code: profileId, targetLanguageIndex };
     }
     await saveProfileData();
   } catch (error) {
@@ -382,6 +416,8 @@ async function importCsv(text) {
 
   const first = rows[0].map((cell) => cell.toLowerCase());
   const hasCategoryColumn = first[0] === "category";
+  const labelColumnIndex = first.indexOf("labels");
+  const hasLabelColumn = labelColumnIndex >= 0;
   const hasHeader = hasCategoryColumn || first.includes("lang1") || first.includes("language 1") || appData.languages.some((lang) => first.includes(lang.toLowerCase()));
   const dataRows = hasHeader ? rows.slice(1) : rows;
   const existing = new Map(appData.vocab.map((word) => [word.key, word]));
@@ -392,6 +428,7 @@ async function importCsv(text) {
   for (const row of dataRows) {
     const rowCategory = hasCategoryColumn ? row[0] : $("categoryName").value;
     const category = upsertCategory(rowCategory);
+    const labels = hasLabelColumn ? upsertLabels(row[labelColumnIndex] || "") : upsertLabels($("labelNames").value);
     touchedCategories.add(category.name);
     const offset = hasCategoryColumn ? 1 : 0;
     const terms = row.slice(offset, offset + 3).map((cell) => cell.trim());
@@ -404,6 +441,8 @@ async function importCsv(text) {
       terms,
       categoryId: category.id,
       categoryName: category.name,
+      labelIds: labels.map((label) => label.id),
+      labelNames: labels.map((label) => label.name),
     };
     if (existing.has(key)) updated += 1;
     else added += 1;
@@ -461,10 +500,14 @@ function render() {
       : cloud ? "Cloud sync ready" : "Local profile";
   }
   renderStudyLanguage();
+  renderProfileTargetLanguage();
   renderStudyCategory();
+  renderStudyLabel();
+  renderManualLabel();
   renderStudy();
   renderTracker();
   renderVocabTable();
+  renderManualReviewList();
   renderAdminGate();
   renderProfileGate();
   renderLogs();
@@ -542,9 +585,16 @@ function readableFirebaseError(error) {
 
 function renderStudyLanguage() {
   const select = $("studyLanguage");
-  const selected = select.value || "0";
+  const selected = select.value || String(profileData.profile.targetLanguageIndex || 0);
   select.innerHTML = appData.languages.map((lang, index) => `<option value="${index}">${escapeHtml(lang)}</option>`).join("");
-  select.value = selected;
+  select.value = appData.languages[selected] ? selected : "0";
+}
+
+function renderProfileTargetLanguage() {
+  const select = $("profileTargetLanguage");
+  const selected = String(profileData.profile.targetLanguageIndex || 0);
+  select.innerHTML = appData.languages.map((lang, index) => `<option value="${index}">${escapeHtml(lang)}</option>`).join("");
+  select.value = appData.languages[selected] ? selected : "0";
 }
 
 function renderStudyCategory() {
@@ -555,6 +605,26 @@ function renderStudyCategory() {
     ...appData.categories.map((category) => `<option value="${escapeHtml(category.id)}">${escapeHtml(category.name)}</option>`),
   ].join("");
   select.value = appData.categories.some((category) => category.id === selected) ? selected : "all";
+}
+
+function renderStudyLabel() {
+  const select = $("studyLabel");
+  const selected = select.value || "all";
+  select.innerHTML = [
+    '<option value="all">All labels</option>',
+    ...appData.labels.map((label) => `<option value="${escapeHtml(label.id)}">${escapeHtml(label.name)}</option>`),
+  ].join("");
+  select.value = appData.labels.some((label) => label.id === selected) ? selected : "all";
+}
+
+function renderManualLabel() {
+  const select = $("manualLabel");
+  const selected = select.value || "all";
+  select.innerHTML = [
+    '<option value="all">All labels</option>',
+    ...appData.labels.map((label) => `<option value="${escapeHtml(label.id)}">${escapeHtml(label.name)}</option>`),
+  ].join("");
+  select.value = appData.labels.some((label) => label.id === selected) ? selected : "all";
 }
 
 function renderStudy() {
@@ -573,11 +643,18 @@ function renderStudy() {
     return;
   }
 
-  const promptIndex = Number($("studyLanguage").value || 0);
-  $("cardPrompt").textContent = currentCard.terms[promptIndex] || currentCard.terms.find(Boolean);
-  const progress = profileData.progress[currentCard.id] || { box: 1 };
+  renderSelectedCard(currentCard);
+}
+
+function renderSelectedCard(card) {
+  const promptIndex = Number($("studyLanguage").value || profileData.profile.targetLanguageIndex || 0);
+  $("emptyStudy").classList.add("hidden");
+  $("flashcard").classList.remove("hidden");
+  $("answerPanel").classList.add("hidden");
+  $("cardPrompt").textContent = card.terms[promptIndex] || card.terms.find(Boolean);
+  const progress = profileData.progress[card.id] || { box: 1 };
   $("cardBox").textContent = `Box ${progress.box}`;
-  $("answerList").innerHTML = currentCard.terms.map((term, index) => `
+  $("answerList").innerHTML = card.terms.map((term, index) => `
     <dt>${escapeHtml(appData.languages[index] || `Lang ${index + 1}`)}</dt>
     <dd>${escapeHtml(term || "-")}</dd>
   `).join("");
@@ -587,28 +664,48 @@ function renderEmptyStudyMessage() {
   const mode = $("studyMode").value || "daily";
   const title = $("emptyStudy").querySelector("h2");
   const message = $("emptyStudy").querySelector("p");
-  if (mode === "daily" && todayReviewCount() >= DAILY_GOAL) {
-    title.textContent = "Daily goal complete";
-    message.textContent = "Switch to Weekly review or All due for more practice.";
-    return;
-  }
   title.textContent = "No words due";
-  message.textContent = "Add vocabulary in Admin or come back when cards are scheduled.";
+  message.textContent = mode === "daily" && todayReviewCount() >= DAILY_GOAL
+    ? "Daily quest is complete. You can keep going with Weekly review, All due, New words, or Manual review."
+    : "Add vocabulary in Admin or come back when cards are scheduled.";
 }
 
 function dueCards() {
   const now = Date.now();
   const categoryId = $("studyCategory").value || "all";
+  const labelId = $("studyLabel").value || "all";
   const mode = $("studyMode").value || "daily";
   const cards = appData.vocab.filter((word) => {
     if (categoryId !== "all" && word.categoryId !== categoryId) return false;
+    if (labelId !== "all" && !(word.labelIds || []).includes(labelId)) return false;
     const progress = profileData.progress[word.id];
     if (mode === "new") return !progress;
     if (mode === "weekly") return !progress || progress.dueAt <= now + 7 * 86400000;
     return !progress || progress.dueAt <= now;
-  }).sort((a, b) => dailyCardRank(a.id) - dailyCardRank(b.id));
-  if (mode !== "daily") return cards;
-  return cards.slice(0, Math.max(0, DAILY_GOAL - todayReviewCount()));
+  });
+  return sortStudyCards(cards);
+}
+
+function sortStudyCards(cards) {
+  const order = $("studyOrder").value || "random";
+  const promptIndex = Number($("studyLanguage").value || profileData.profile.targetLanguageIndex || 0);
+  const scoreRank = { again: 0, hard: 1, good: 2, easy: 3 };
+  const unseen = (word) => profileData.progress[word.id] ? 1 : 0;
+  const lastScore = (word) => profileData.progress[word.id]?.lastScore || "";
+  const dueAt = (word) => profileData.progress[word.id]?.dueAt || 0;
+  const alpha = (a, b) => String(a.terms[promptIndex] || "").localeCompare(String(b.terms[promptIndex] || ""));
+  const random = (a, b) => dailyCardRank(a.id) - dailyCardRank(b.id);
+  const sorted = [...cards];
+
+  if (order === "alphabetical") return sorted.sort(alpha);
+  if (order === "new-first") return sorted.sort((a, b) => unseen(a) - unseen(b) || alpha(a, b));
+  if (order === "hard-first") return sorted.sort((a, b) => (lastScore(a) === "hard" ? 0 : 1) - (lastScore(b) === "hard" ? 0 : 1) || random(a, b));
+  if (order === "again-first") return sorted.sort((a, b) => (lastScore(a) === "again" ? 0 : 1) - (lastScore(b) === "again" ? 0 : 1) || random(a, b));
+  if (order === "easy-first") return sorted.sort((a, b) => (lastScore(a) === "easy" ? 0 : 1) - (lastScore(b) === "easy" ? 0 : 1) || random(a, b));
+  if (order === "passed-first") return sorted.sort((a, b) => (lastScore(a) === "good" ? 0 : 1) - (lastScore(b) === "good" ? 0 : 1) || random(a, b));
+  if (order === "due-first") return sorted.sort((a, b) => dueAt(a) - dueAt(b) || random(a, b));
+  if (order === "random") return sorted.sort(random);
+  return sorted.sort((a, b) => (scoreRank[lastScore(a)] ?? 9) - (scoreRank[lastScore(b)] ?? 9) || random(a, b));
 }
 
 async function review(score) {
@@ -646,13 +743,15 @@ async function review(score) {
 function renderTracker() {
   const reviews = profileData.reviews;
   const correct = reviews.filter((review) => review.score !== "again").length;
+  const stats = { ...defaultProfileData.stats, ...profileData.stats };
   $("totalWords").textContent = appData.vocab.length;
   $("reviewedToday").textContent = reviews.filter((review) => review.date === todayKey()).length;
   $("accuracyRate").textContent = reviews.length ? `${Math.round((correct / reviews.length) * 100)}%` : "0%";
-  $("streakDays").textContent = calculateStreak(reviews);
-  $("pointsTotal").textContent = profileData.stats.points;
-  $("levelNumber").textContent = calculateLevel(profileData.stats.points);
+  $("streakDays").textContent = stats.streak || calculateStreak(reviews);
+  $("pointsTotal").textContent = stats.points;
+  $("levelNumber").textContent = calculateLevel(stats.points);
   renderDailyGoal();
+  renderGamificationDashboard();
 
   const counts = [1, 2, 3, 4, 5].map((box) => Object.values(profileData.progress).filter((item) => item.box === box).length);
   const max = Math.max(1, ...counts);
@@ -670,6 +769,75 @@ function renderDailyGoal() {
   const progress = Math.min(100, Math.round((reviewed / DAILY_GOAL) * 100));
   $("dailyGoalText").textContent = `${Math.min(reviewed, DAILY_GOAL)}/${DAILY_GOAL}`;
   $("dailyGoalBar").style.width = `${progress}%`;
+}
+
+function renderManualReviewList() {
+  const target = $("manualReviewList");
+  if (!target) return;
+  document.querySelectorAll(".manual-filter").forEach((button) => {
+    button.classList.toggle("active", button.dataset.filter === manualReviewFilter);
+  });
+  const words = appData.vocab.filter((word) => {
+    if (manualReviewFilter === "all") return true;
+    return profileData.progress[word.id]?.lastScore === manualReviewFilter;
+  }).filter((word) => {
+    const labelId = $("manualLabel").value || "all";
+    return labelId === "all" || (word.labelIds || []).includes(labelId);
+  });
+  if (!words.length) {
+    target.innerHTML = '<p class="hint">No words in this review group yet.</p>';
+    return;
+  }
+  target.innerHTML = words.map((word) => {
+    const progress = profileData.progress[word.id] || { box: 1, lastScore: "new" };
+    const status = scoreLabel(progress.lastScore);
+    return `
+      <div class="manual-row">
+        <div>
+          <strong>${escapeHtml(word.categoryName || "General")}</strong>
+          <span>${escapeHtml(status)} · Box ${progress.box}</span>
+        </div>
+        <div class="manual-terms">
+          ${word.terms.map((term, index) => `<span>${escapeHtml(appData.languages[index])}: ${escapeHtml(term || "-")}</span>`).join("")}
+          ${(word.labelNames || []).map((label) => `<span>${escapeHtml(label)}</span>`).join("")}
+        </div>
+        <button type="button" data-review-word="${escapeHtml(word.id)}">Review</button>
+      </div>
+    `;
+  }).join("");
+}
+
+function scoreLabel(score) {
+  if (score === "again") return "Not passed";
+  if (score === "hard") return "Hard";
+  if (score === "easy") return "Easy";
+  if (score === "good") return "Passed";
+  return "New";
+}
+
+function renderGamificationDashboard() {
+  const reviewed = todayReviewCount();
+  const dailyProgress = Math.min(100, Math.round((reviewed / DAILY_GOAL) * 100));
+  $("dailyQuestText").textContent = `${Math.min(reviewed, DAILY_GOAL)} of ${DAILY_GOAL} reviews`;
+  $("dailyQuestReward").textContent = reviewed >= DAILY_GOAL ? "claimed" : "+20 XP";
+  $("dailyQuestBar").style.width = `${dailyProgress}%`;
+
+  const mastered = Object.values(profileData.progress).filter((item) => item.box >= 5).length;
+  const masteryPercent = appData.vocab.length ? Math.round((mastered / appData.vocab.length) * 100) : 0;
+  $("masteryText").textContent = `${mastered} mastered`;
+  $("masteryPercent").textContent = `${masteryPercent}%`;
+  $("masteryBar").style.width = `${masteryPercent}%`;
+
+  const level = calculateLevel(profileData.stats.points);
+  const currentFloor = levelXpFloor(level);
+  const nextFloor = levelXpFloor(level + 1);
+  const levelProgress = Math.round(((profileData.stats.points - currentFloor) / Math.max(1, nextFloor - currentFloor)) * 100);
+  $("levelProgressText").textContent = `${Math.max(0, nextFloor - profileData.stats.points)} XP needed`;
+  $("levelTitle").textContent = levelTitle(level);
+  $("levelBar").style.width = `${Math.max(0, Math.min(100, levelProgress))}%`;
+
+  renderWeekDots();
+  renderBadges(mastered);
 }
 
 function calculateStreak(reviews) {
@@ -698,19 +866,69 @@ function updateGamification(score) {
   stats.bestStreak = Math.max(stats.bestStreak, stats.streak);
   stats.points += scorePoints(score);
   const reviewedToday = todayReviewCount();
-  if (reviewedToday === DAILY_GOAL) stats.points += 20;
+  if (reviewedToday === DAILY_GOAL && !dailyBonusClaimed(today)) stats.points += 20;
   profileData.stats = stats;
 }
 
 function scorePoints(score) {
-  if (score === "again") return 1;
-  if (score === "hard") return 3;
-  if (score === "easy") return 7;
-  return 5;
+  return XP_BY_SCORE[score] || XP_BY_SCORE.good;
 }
 
 function calculateLevel(points) {
-  return Math.max(1, Math.floor(Math.sqrt(Math.max(0, points) / 25)) + 1);
+  let level = 1;
+  while (points >= levelXpFloor(level + 1)) level += 1;
+  return level;
+}
+
+function levelXpFloor(level) {
+  return Math.pow(Math.max(0, level - 1), 2) * 60;
+}
+
+function levelTitle(level) {
+  if (level >= 10) return "Fluent builder";
+  if (level >= 7) return "Memory maker";
+  if (level >= 4) return "Steady learner";
+  return "Starter";
+}
+
+function dailyBonusClaimed(date) {
+  return profileData.reviews.filter((review) => review.date === date).length > DAILY_GOAL;
+}
+
+function renderWeekDots() {
+  const reviewDays = new Set(profileData.reviews.map((review) => review.date));
+  const labels = ["M", "T", "W", "T", "F", "S", "S"];
+  const monday = startOfWeek(new Date());
+  $("weekDots").innerHTML = labels.map((label, index) => {
+    const date = new Date(monday);
+    date.setDate(monday.getDate() + index);
+    const done = reviewDays.has(date.toISOString().slice(0, 10));
+    return `<span class="week-dot ${done ? "done" : ""}">${label}</span>`;
+  }).join("");
+}
+
+function renderBadges(mastered) {
+  const reviews = profileData.reviews;
+  const stats = { ...defaultProfileData.stats, ...profileData.stats };
+  const badges = [
+    { name: "First step", earned: reviews.length >= 1 },
+    { name: "Daily 10", earned: todayReviewCount() >= DAILY_GOAL },
+    { name: "3-day rhythm", earned: stats.streak >= 3 },
+    { name: "7-day rhythm", earned: stats.streak >= 7 },
+    { name: "50 reviews", earned: reviews.length >= 50 },
+    { name: "10 mastered", earned: mastered >= 10 },
+  ];
+  $("badgeList").innerHTML = badges.map((badge) => (
+    `<span class="badge ${badge.earned ? "earned" : ""}">${escapeHtml(badge.name)}</span>`
+  )).join("");
+}
+
+function startOfWeek(date) {
+  const next = new Date(date);
+  const day = (next.getDay() + 6) % 7;
+  next.setDate(next.getDate() - day);
+  next.setHours(0, 0, 0, 0);
+  return next;
 }
 
 function dateOffsetKey(offsetDays) {
@@ -720,15 +938,15 @@ function dateOffsetKey(offsetDays) {
 }
 
 function renderVocabTable() {
-  $("vocabHead").innerHTML = `<tr><th>Category</th>${appData.languages.map((lang) => `<th>${escapeHtml(lang)}</th>`).join("")}<th>Box</th></tr>`;
+  $("vocabHead").innerHTML = `<tr><th>Category</th><th>Labels</th>${appData.languages.map((lang) => `<th>${escapeHtml(lang)}</th>`).join("")}<th>Box</th></tr>`;
   $("vocabTable").innerHTML = appData.vocab.map((word) => {
     const box = profileData.progress[word.id]?.box || 1;
-    return `<tr><td>${escapeHtml(word.categoryName || "General")}</td>${word.terms.map((term) => `<td>${escapeHtml(term)}</td>`).join("")}<td>${box}</td></tr>`;
+    return `<tr><td>${escapeHtml(word.categoryName || "General")}</td><td>${escapeHtml((word.labelNames || []).join(", "))}</td>${word.terms.map((term) => `<td>${escapeHtml(term)}</td>`).join("")}<td>${box}</td></tr>`;
   }).join("");
 }
 
 function downloadCsv() {
-  const rows = [["Category", ...appData.languages], ...appData.vocab.map((word) => [word.categoryName || "General", ...word.terms])];
+  const rows = [["Category", ...appData.languages, "Labels"], ...appData.vocab.map((word) => [word.categoryName || "General", ...word.terms, (word.labelNames || []).join("; ")])];
   const csv = rows.map((row) => row.map(csvCell).join(",")).join("\n");
   const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
   const url = URL.createObjectURL(blob);
@@ -746,11 +964,13 @@ function csvCell(value) {
 
 function mergeAppData(local, remote) {
   const categories = mergeCategories(remote.categories, local.categories);
-  const vocab = new Map(normalizeVocab(remote.vocab, categories).map((word) => [word.key, word]));
-  normalizeVocab(local.vocab, categories).forEach((word) => vocab.set(word.key, word));
+  const labels = mergeLabels(remote.labels, local.labels);
+  const vocab = new Map(normalizeVocab(remote.vocab, categories, labels).map((word) => [word.key, word]));
+  normalizeVocab(local.vocab, categories, labels).forEach((word) => vocab.set(word.key, word));
   return {
     languages: local.languages.length === 3 ? local.languages : remote.languages,
     categories,
+    labels,
     vocab: [...vocab.values()],
   };
 }
@@ -820,6 +1040,35 @@ function upsertCategory(name) {
   return category;
 }
 
+function upsertLabels(value) {
+  return splitLabels(value).map((name) => {
+    const existing = appData.labels.find((label) => label.name.toLowerCase() === name.toLowerCase());
+    if (existing) return existing;
+    const label = { id: uniqueLabelId(name), name };
+    appData.labels.push(label);
+    return label;
+  });
+}
+
+function uniqueLabelId(name) {
+  const base = slugify(name);
+  const usedIds = new Set(appData.labels.map((label) => label.id));
+  let next = base;
+  let index = 2;
+  while (usedIds.has(next)) {
+    next = `${base}-${index}`;
+    index += 1;
+  }
+  return next;
+}
+
+function splitLabels(value) {
+  return String(value || "")
+    .split(/[;,]/)
+    .map((label) => label.trim())
+    .filter(Boolean);
+}
+
 function normalizeCategories(categories) {
   const source = Array.isArray(categories) && categories.length ? categories : defaultAppData.categories;
   const seen = new Set();
@@ -840,11 +1089,50 @@ function mergeCategories(remote = [], local = []) {
   return [...byName.values()];
 }
 
-function normalizeVocab(vocab, categories) {
+function normalizeLabels(labels) {
+  const source = Array.isArray(labels) ? labels : [];
+  const seen = new Set();
+  return source.map((label) => {
+    const name = String(label.name || "").trim();
+    if (!name) return null;
+    let id = String(label.id || slugify(name)).trim() || slugify(name);
+    while (seen.has(id)) id = `${id}-copy`;
+    seen.add(id);
+    return { id, name };
+  }).filter(Boolean);
+}
+
+function mergeLabels(remote = [], local = []) {
+  const byName = new Map();
+  [...normalizeLabels(remote), ...normalizeLabels(local)].forEach((label) => {
+    byName.set(label.name.toLowerCase(), label);
+  });
+  return [...byName.values()];
+}
+
+function collectLabelsFromVocab(vocab) {
+  const labels = [];
+  (Array.isArray(vocab) ? vocab : []).forEach((word) => {
+    (word.labelNames || []).forEach((name) => {
+      if (name) labels.push({ id: slugify(name), name });
+    });
+  });
+  return labels;
+}
+
+function normalizeVocab(vocab, categories, labels = []) {
   const categoryMap = new Map(categories.map((category) => [category.id, category]));
+  const labelMap = new Map(labels.map((label) => [label.id, label]));
   const fallback = categories[0] || defaultAppData.categories[0];
   return Array.isArray(vocab) ? vocab.map((word) => {
     const category = categoryMap.get(word.categoryId) || fallback;
+    const labelIds = Array.isArray(word.labelIds) ? word.labelIds : [];
+    const labelNames = Array.isArray(word.labelNames) ? word.labelNames : [];
+    const normalizedLabels = [
+      ...labelIds.map((id) => labelMap.get(id)).filter(Boolean),
+      ...labelNames.map((name) => labels.find((label) => label.name.toLowerCase() === String(name).toLowerCase())).filter(Boolean),
+    ];
+    const uniqueLabels = [...new Map(normalizedLabels.map((label) => [label.id, label])).values()];
     const terms = Array.isArray(word.terms) ? word.terms.slice(0, 3) : [];
     while (terms.length < 3) terms.push("");
     return {
@@ -853,6 +1141,8 @@ function normalizeVocab(vocab, categories) {
       terms,
       categoryId: category.id,
       categoryName: category.name,
+      labelIds: uniqueLabels.map((label) => label.id),
+      labelNames: uniqueLabels.map((label) => label.name),
     };
   }) : [];
 }

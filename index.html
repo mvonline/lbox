@@ -33,9 +33,14 @@
               <button id="createProfileMode" class="mode-btn active" type="button">New profile</button>
               <button id="resumeProfileMode" class="mode-btn" type="button">Use name</button>
             </div>
+            <p class="hint">Use a unique name to save progress across devices. Choose Use name when returning.</p>
             <label class="field" id="profileNameField">
               <span>Unique name</span>
               <input id="profileName" placeholder="Your name or nickname" autocomplete="username">
+            </label>
+            <label class="field">
+              <span>Language to learn</span>
+              <select id="profileTargetLanguage"></select>
             </label>
             <input id="profileCode" type="hidden">
             <button id="saveProfile" class="primary wide-button">Continue</button>
@@ -61,12 +66,16 @@
               <div><strong id="knownCount">0</strong><span>Known</span></div>
             </div>
             <label class="field">
-              <span>Study language</span>
+              <span>Main word language</span>
               <select id="studyLanguage"></select>
             </label>
             <label class="field">
               <span>Category</span>
               <select id="studyCategory"></select>
+            </label>
+            <label class="field">
+              <span>Label</span>
+              <select id="studyLabel"></select>
             </label>
             <label class="field">
               <span>Session</span>
@@ -77,6 +86,20 @@
                 <option value="new">New words</option>
               </select>
             </label>
+            <label class="field">
+              <span>Order</span>
+              <select id="studyOrder">
+                <option value="random">Randomized</option>
+                <option value="alphabetical">Alphabetical</option>
+                <option value="new-first">Not seen first</option>
+                <option value="hard-first">Hard first</option>
+                <option value="again-first">Not passed first</option>
+                <option value="easy-first">Easy first</option>
+                <option value="passed-first">Passed first</option>
+                <option value="due-first">Most overdue</option>
+              </select>
+            </label>
+            <p class="hint">Daily goal gives structure. Weekly review previews upcoming cards. Manual review below is always open.</p>
             <div class="goal-card">
               <div>
                 <span>Today</span>
@@ -97,6 +120,7 @@
               <button id="revealAnswer" class="primary">Reveal answer</button>
               <div id="answerPanel" class="answer hidden">
                 <dl id="answerList"></dl>
+                <p class="hint">Not passed resets the card. Hard moves it down. Passed moves it up. Easy moves it ahead faster.</p>
                 <div class="review-actions">
                   <button id="againBtn" class="danger">Not passed</button>
                   <button id="hardBtn">Hard</button>
@@ -106,6 +130,26 @@
               </div>
             </div>
           </article>
+        </div>
+        <div class="panel manual-review">
+          <div class="section-head">
+            <div>
+              <h2>Manual review</h2>
+              <p class="hint">Filter by your last result and review any word whenever you want.</p>
+            </div>
+            <div class="review-filters" aria-label="Manual review filters">
+              <button class="manual-filter active" data-filter="all" type="button">All</button>
+              <button class="manual-filter" data-filter="good" type="button">Passed</button>
+              <button class="manual-filter" data-filter="hard" type="button">Hard</button>
+              <button class="manual-filter" data-filter="easy" type="button">Easy</button>
+              <button class="manual-filter" data-filter="again" type="button">Not passed</button>
+            </div>
+          </div>
+          <label class="field manual-label-filter">
+            <span>Label</span>
+            <select id="manualLabel"></select>
+          </label>
+          <div id="manualReviewList" class="manual-list"></div>
         </div>
       </section>
 
@@ -119,8 +163,42 @@
           <div class="panel"><strong id="reviewedToday">0</strong><span>Reviewed today</span></div>
           <div class="panel"><strong id="accuracyRate">0%</strong><span>Accuracy</span></div>
           <div class="panel"><strong id="streakDays">0</strong><span>Day streak</span></div>
-          <div class="panel"><strong id="pointsTotal">0</strong><span>Points</span></div>
+          <div class="panel"><strong id="pointsTotal">0</strong><span>XP</span></div>
           <div class="panel"><strong id="levelNumber">1</strong><span>Level</span></div>
+        </div>
+        <div class="progress-panels">
+          <div class="panel">
+            <h3>Daily quest</h3>
+            <div class="quest-row">
+              <span id="dailyQuestText">0 of 10 reviews</span>
+              <strong id="dailyQuestReward">+20 XP</strong>
+            </div>
+            <div class="bar"><i id="dailyQuestBar"></i></div>
+          </div>
+          <div class="panel">
+            <h3>Weekly rhythm</h3>
+            <div class="week-dots" id="weekDots"></div>
+          </div>
+          <div class="panel">
+            <h3>Mastery</h3>
+            <div class="quest-row">
+              <span id="masteryText">0 mastered</span>
+              <strong id="masteryPercent">0%</strong>
+            </div>
+            <div class="bar"><i id="masteryBar"></i></div>
+          </div>
+          <div class="panel">
+            <h3>Next level</h3>
+            <div class="quest-row">
+              <span id="levelProgressText">0 XP needed</span>
+              <strong id="levelTitle">Starter</strong>
+            </div>
+            <div class="bar"><i id="levelBar"></i></div>
+          </div>
+        </div>
+        <div class="panel">
+          <h3>Badges</h3>
+          <div id="badgeList" class="badge-list"></div>
         </div>
         <div class="panel">
           <h3>Boxes</h3>
@@ -162,6 +240,10 @@
             <label class="field">
               <span>Upload category</span>
               <input id="categoryName" placeholder="Fashion, Economy, IT">
+            </label>
+            <label class="field">
+              <span>Labels</span>
+              <input id="labelNames" placeholder="exam, verb, beginner">
             </label>
             <label class="field">
               <span>Import CSV</span>
